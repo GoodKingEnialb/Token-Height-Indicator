@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+	<!-- OPTIONS -->
+	<string name="option_header_height_indicator">Token Height Indicator</string>
+	<string name="option_label_allow_player_mod">Players can change height?</string>
+
+	<!-- VALUES -->
+	<string name="option_val_yes">Yes</string>
+	<string name="option_val_no">No</string>
+
+</root>

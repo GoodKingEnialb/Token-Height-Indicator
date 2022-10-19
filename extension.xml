@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- 
+	Fantasy Grounds is copyright SmiteWorks USA LLC, 2004-2021. All Rights Reserved.
+	
+	No core Fantasy Grounds files have been modified to create this extension
+
+	This extension may be used freely directly as-is, modified, or incorporated into another extension.
+	
+	Release History:
+		1.0 - Initial release
+		1.1 - Display indicator for players, lock scaling to cntrl-wheel
+		1.2 - Players can change height themselves (with option)
+		1.3 - Non-square tokens scale correctly
+		1.4 - Players can set height to 0.  Heights shown automatically instead of only when DM first alters them.
+		1.5 - Protect against empty combat tokens
+-->
+<root version="1.5" release="1">
+	<announcement text="5E Height Indication by GKEnialb" font="emotefont" icon="GKElogo" />
+	
+	<properties>
+		<name>5E Height Indication</name>
+		<version>1.5</version>
+		
+		<author>Good King Enialb</author>
+		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>
+		
+		<ruleset>
+			<name>5E</name>
+		</ruleset>			
+	</properties>    	
+
+	<base>	
+		<!-- icon -->
+		<icon name="GKElogo" file="graphics/icons/GKE_Logo.png" />	
+		
+		<!-- strings -->
+		<includefile source="strings/height_strings.xml"/>
+		
+		<!-- scripts -->
+		<script name="TokenHeight" file="scripts/token_height_indication.lua" />
+		
+	</base>	
+
+</root>
