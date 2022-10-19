@@ -21,6 +21,7 @@ function onInit()
 
 	-- Register clients for height changes
     OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_TOKENHEIGHTCHANGE, updateTokenHeightIndicators)
+	
 end
 
 function registerOptions()
@@ -64,9 +65,6 @@ function onWheel(tokenCT, notches)
 			end
 		end
 		tokenCT.setScale(newscale * rectScale)
-	
-		--stopProcessing = onWheel_orig(tokenCT, notches)
-		
     end
 		
     return true
@@ -109,6 +107,15 @@ function updateHeight(token, notches)
 	notifyHeightChange()
 end
 
+function getHeight(ctNode)
+	local heightHolder = DB.getChild(ctNode, "heightvalue")
+	local nHeight = 0
+	if heightHolder and heightHolder.getValue() then
+        nHeight = tonumber(heightHolder.getValue())   
+    end
+	return nHeight
+end
+
 -- notifies clients to update token height
 function updateTokenHeightIndicators()
     for _, ctNode in pairs(CombatManager.getCombatantNodes()) do
@@ -117,20 +124,20 @@ function updateTokenHeightIndicators()
 end
 
 
-function displayHeight(height) 
-    if not height then
+function displayHeight(heightWidget) 
+    if not heightWidget then
         return
     end
 	
-	local ctNode = height.getParent()
+	local ctNode = heightWidget.getParent()
     local ctToken = CombatManager.getTokenFromCT(ctNode)
 	if not (ctToken) then
 		return
 	end
 	local nHeight = 0
 	
-	if height.getValue() ~= nil then
-        nHeight = tonumber(height.getValue());   
+	if heightWidget.getValue() ~= nil then
+        nHeight = tonumber(heightWidget.getValue());   
     end
 	
 	local widget = ctToken.findWidget("heightindication")

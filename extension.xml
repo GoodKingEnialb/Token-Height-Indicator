@@ -4,7 +4,7 @@
 	
 	No core Fantasy Grounds files have been modified to create this extension
 
-	This extension may be used freely directly as-is, modified, or incorporated into another extension.
+	This work is Public Domain and may be used freely directly as-is, modified, or incorporated into another extension.
 	
 	Release History:
 		1.0 - Initial release
@@ -13,13 +13,14 @@
 		1.3 - Non-square tokens scale correctly
 		1.4 - Players can set height to 0.  Heights shown automatically instead of only when DM first alters them.
 		1.5 - Protect against empty combat tokens
+		1.6 - Use height in the range arrow
 -->
-<root version="1.5" release="1">
-	<announcement text="5E Height Indication by GKEnialb" font="emotefont" icon="GKElogo" />
+<root version="1.6" release="1">
+	<announcement text="5E Height Indication v1.6 by GKEnialb" font="emotefont" icon="GKElogo" />
 	
 	<properties>
 		<name>5E Height Indication</name>
-		<version>1.5</version>
+		<version>1.6</version>
 		
 		<author>Good King Enialb</author>
 		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>
@@ -38,7 +39,15 @@
 		
 		<!-- scripts -->
 		<script name="TokenHeight" file="scripts/token_height_indication.lua" />
-		
+	
+		<!-- override coreRPG: /campaigns/scripts/image.lua -->			
+		<template name="image_record_step">
+			<imagecontrol name="image">
+				<indicators locked="image_locked" loading="image_loading" />
+				<default snap="on" drawingsize="500,500" />
+				<script file="campaign/scripts/image.lua" />
+			</imagecontrol>
+		</template>	
 	</base>	
 
 </root>
