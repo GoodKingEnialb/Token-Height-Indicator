@@ -150,6 +150,18 @@ function getTokensWithinDistance(sourceItem, distance)
    end		 
 end
 
+-- Get all tokens within a shape (including the origin token).  Shapes supported are line, cube, sphere, cylinder, and cone.
+-- Second point(x2,y2,z2) only applies to cones and lines, height only applies to cylinders, width only applies to lines.
+-- For a cone, distance = length of cone, height = height of spherical cap (0 if not spherical), width = angle of cone in degrees (53 in 5e, 90 in 3.5)
+function getTokensWithinShape(originToken, shape, distance, height, width, azimuthalAngle, polarAngle)
+	local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(originToken, true)
+	if ctrlImage then
+	   return ctrlImage.getTokensWithinShapeFromToken(originToken, shape, distance, height, width, azimuthalAngle, polarAngle)
+	else
+	   return {}
+	end		 
+ end
+
 -- Simplified greatly by Kelrugem (with help from Moon Wizard) - don't completely override onWheel, as the original gets run in semi-parallel
 function onWheel(tokenCT, notches)
     if Input.isAltPressed() then  
@@ -184,6 +196,49 @@ function updateHeight(token, notches)
 		local x, y = token.getPosition()
 		token.setPosition(x+1,y+1)
 		token.setPosition(x,y)	
+-- TEST TEST TEST
+print("SPHERE")
+theTokens = getTokensWithinShape(token, "sphere", 30, nil, nil, nil, nil, nil)
+if theTokens then
+	for _,oneToken in pairs(theTokens) do
+		print(oneToken.getName())
+	end
+else
+	print("No tokens in range")
+end
+
+print("CUBE")
+theTokens = getTokensWithinShape(token, "cube", 60, nil, nil, nil, nil, nil)
+if theTokens then
+	for _,oneToken in pairs(theTokens) do
+		print(oneToken.getName())
+	end
+else
+	print("No tokens in range")
+end
+
+print("CYLINDER")
+theTokens = getTokensWithinShape(token, "cylinder", 30, 20, nil, nil, nil, nil)
+if theTokens then
+	for _,oneToken in pairs(theTokens) do
+		print(oneToken.getName())
+	end
+else
+	print("No tokens in range")
+end
+
+print("CONE")
+local nx, ny = token.getPosition()
+local nz = nHeight
+theTokens = getTokensWithinShape(token, "cone", 30, 1, 53, 0, 0)
+if theTokens then
+	for _,oneToken in pairs(theTokens) do
+		print(oneToken.getName())
+	end
+else
+	print("No tokens in range")
+end
+-- TEST TEST TEST
 	else
 		requestOwnership(token, nHeight)
 	end
@@ -216,17 +271,6 @@ function updateUnits(image)
 		heightUnits = suffix
 	end
 end
-
---function setUnits(units, suffix)
---	notchScale = units
---	if suffix == '\'' then
---		heightUnits = ' ft'
---	elseif suffix == '' then
---		heightUnits = ' sq'
---	else
---		heightUnits = suffix
---	end
---end
 
 function getHeight(ctNode)
 	local heightHolder = DB.getChild(ctNode, "heightvalue")
