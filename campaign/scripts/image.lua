@@ -5,9 +5,17 @@ local lastGridSize = 43
 local lastUnits = 5
 local lastSuffix = "ft"
 local lastDiag = 0
+local OptData = {}
+
+function ResetOptData(hashtag)
+	if hashtag then
+		OptData[hashtag] = {}
+	else
+		OptData = {}
+	end
+end
 
 function getImageSettings()
-	
 	local gridsize = lastGridSize
 	if getGridSize then
 		gridsize = getGridSize()
@@ -135,7 +143,8 @@ function getTokensWithinDistance(sourceItem, distance)
 	
 	for _,ctNode in pairs(CombatManager.getCombatantNodes()) do
 		targetToken = CombatManager.getTokenFromCT(ctNode)
-		if targetToken ~= sourceToken then
+		-- Arnagus fix for targets on multiple maps
+		if targetToken and targetToken ~= sourceToken then
 
 			local endz = 0
 			if targetToken then
@@ -243,13 +252,14 @@ function onInit()
 	end
 	
 	_, units, suffix, _ = getImageSettings()
-	TokenHeight.setUnits(units, suffix)
+--	TokenHeight.setUnits(units, suffix)
+	TokenHeight.refreshHeights()
+	ResetOptData()
 end
 
 -- Distance between two locations in 3 dimensions.
 function distanceBetween(startx,starty,startz,endx,endy,endz,bSquare)
-
---	Debug.console("distanceBetween " .. startx .. "," .. starty .. "," .. startz .. " and " ..  endx .. "," .. endy .. "," .. endz)
+--Debug.console("distanceBetween " .. startx .. "," .. starty .. "," .. startz .. " and " ..  endx .. "," .. endy .. "," .. endz)
 	local gridsize, units, suffix, diagmult = getImageSettings()
 
 	local totalDistance = 0
@@ -257,7 +267,7 @@ function distanceBetween(startx,starty,startz,endx,endy,endz,bSquare)
 	local dy = math.abs(endy-starty)
 	local dz = math.abs(endz-startz)
 
---	Debug.console("gridsize " .. gridsize .. ", units " .. units .. ", suffix " .. suffix .. ", diagmult " ..  diagmult)
+--Debug.console("gridsize " .. gridsize .. ", units " .. units .. ", suffix " .. suffix .. ", diagmult " ..  diagmult)
 	
 	if bSquare then
 		local hyp = math.sqrt((dx^2)+(dy^2)+(dz^2))
@@ -306,16 +316,28 @@ function distanceBetween(startx,starty,startz,endx,endy,endz,bSquare)
 		end
 	end
 
---	Debug.console(" is " .. totalDistance)
+--Debug.console(" is " .. totalDistance)
 	return totalDistance
 end
 
 function onMeasurePointer(pixellength,pointertype,startx,starty,endx,endy)
-	-- Modified by SilentRuin to better integrate with the superclasses
+	-- Modified by SilentRuin to better integrate with the superclasses and optimize
 	local retStr = nil -- we will not do anything with label but if someone ever does we can handle the that code first
 	if super and super.onMeasurePointer then
 		retStr = super.onMeasurePointer(pixellength, pointertype, startx, starty, endx, endy)
 	end
+
+	local hashtag = tostring(startx) .. tostring(starty) .. tostring(endx) .. tostring(endy)
+	if OptData and OptData[hashtag] and 
+		OptData[hashtag].pixellength == pixellength and 
+		OptData[hashtag].pointertype == pointertype then 
+		if OptData[hashtag].retStr then
+			return OptData[hashtag].retStr
+		else
+			return retStr
+		end
+	end
+	ResetOptData(hashtag)
 
 	local ctNodeOrigin, ctNodeTarget = getCTNodeAt(startx,starty, endx, endy)
 	if ctNodeOrigin and ctNodeTarget then
@@ -323,12 +345,14 @@ function onMeasurePointer(pixellength,pointertype,startx,starty,endx,endy)
 		local heightTarget = TokenHeight.getHeight(ctNodeTarget)
 		-- If height is on same plane then we don't need to waste time doing anything
 		if heightOrigin == heightTarget then
+			OptData[hashtag] = {pixellength = pixellength, pointertype = pointertype, endx = endx, endy = endy, retStr = nil}
 			return retStr
 		end
 		
 		local gridsize, units, suffix, diagmult = getImageSettings()
 		if not (gridsize and units and suffix and diagmult) then 
-			return
+			OptData[hashtag] = {pixellength = pixellength, pointertype = pointertype, endx = endx, endy = endy, retStr = nil}
+			return retStr
 		end
 		local bSquare = false
 		if pointertype == "rectangle" then
@@ -341,7 +365,7 @@ function onMeasurePointer(pixellength,pointertype,startx,starty,endx,endy)
 		endz = heightTarget * gridsize / units
 		local distance = distanceBetween(startx,starty,startz,endx,endy,endz,bSquare)
 		if distance == 0 then
-			return ""
+			retStr = ""
 		else
 			local stringDistance = nil
 			if diagmult == 0 then
@@ -349,9 +373,10 @@ function onMeasurePointer(pixellength,pointertype,startx,starty,endx,endy)
 			else
 				stringDistance = string.format("%.0f", distance)	
 			end
-			return stringDistance .. suffix
+			retStr = stringDistance .. suffix
 		end
 	end
+	OptData[hashtag] = {pixellength = pixellength, pointertype = pointertype, endx = endx, endy = endy, retStr = retStr}
 	return retStr
 end
 
@@ -476,6 +501,7 @@ function onDrop(x, y, draginfo)
 		custData.imgCtrl = self
 		draginfo.setCustomData(custData)
 	end
+	ResetOptData()
 
 	if super and super.onDrop then
 		return super.onDrop(x, y, draginfo)

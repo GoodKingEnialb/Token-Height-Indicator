@@ -45,14 +45,18 @@
 		4.10 - Removed restriction for ruleset
 		4.11 - And fixed bug with 4.10
 		4.12 - Incorporated SilentRuin's performance updates and calls to super() in image.lua
-		4.13 - Additional performance improvements from SilentRuin
+		4.13 - Additional performance improvements with help from SilentRuin
+		4.14 - Fixed a disconnect between host and client by making things a bit less efficient
+		4.15 - Incorporated Arnagus fix for targets on multiple maps
+		4.16 - Fixed bug where first time clients couldn't update height by themselves
+		4.17 - Work with multiple maps open at the same time with different units
 -->
-<root version="4" release="13">
-	<announcement text="Token Height Indication v4.13 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, and SilentRuin" font="emotefont" icon="GKElogo" />
+<root version="4" release="17">
+	<announcement text="Token Height Indication v4.17 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, SilentRuin, and Arnagus" font="emotefont" icon="GKElogo" />
 	
 	<properties>
 		<name>Feature: Token Height Indication</name>
-		<version>4.13</version>
+		<version>4.17</version>
 		
 		<author>Good King Enialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, and bratch9</author>
 		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>

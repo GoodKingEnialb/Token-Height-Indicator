@@ -7,26 +7,22 @@ local heightFont = ''
 local bPlayerControl = true
 
 OOB_MSGTYPE_TOKENHEIGHTCHANGE = "UpdateHeightIndicator"
+OOB_MSGTYPE_REQUESTOWNERSHIP = "RequestTokenOwnership"
 	
 function onInit()
-
 	registerOptions()
-
-	-- height handler
-    --DB.addHandler("combattracker.list.*.height", "onUpdate", dbWatcher)
-		
+	
 	-- squirrel away original functions
 	updateEffectsHelper_orig = TokenManager.updateEffectsHelper
-	getWidgetList_orig = TokenManager.getWidgetList
 	
 	-- override functions
 	Token.onWheel = onWheel
-	TokenManager.getWidgetList = getWidgetList
 	Token.getDistanceBetween = getDistanceBetween
 	Token.getTokensWithinDistance = getTokensWithinDistance
 
-	-- Register clients for height changes
+	-- Register clients for height changes and server to give ownership if client tries to update first
     OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_TOKENHEIGHTCHANGE, updateTokenHeightIndicators)
+    OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_REQUESTOWNERSHIP, updateOwnership)
 	
 end
 
@@ -157,13 +153,13 @@ end
 -- Simplified greatly by Kelrugem (with help from Moon Wizard) - don't completely override onWheel, as the original gets run in semi-parallel
 function onWheel(tokenCT, notches)
     if Input.isAltPressed() then  
-        TokenHeight.updateHeight(tokenCT, notches, true);
+        TokenHeight.updateHeight(tokenCT, notches);
         return true;
     end
 end
 
 -- Sets and displays the height of the token
-function updateHeight(token, notches, forceRangeArrowRedraw)
+function updateHeight(token, notches)
     if not token then
         return
     end
@@ -185,22 +181,42 @@ function updateHeight(token, notches, forceRangeArrowRedraw)
 	
 	if (ctNode.isOwner() and bPlayerControl) or Session.IsHost then
 		DB.setValue(ctNode, "heightvalue", "number", nHeight)
-		if forceRangeArrowRedraw then
-			local x, y = token.getPosition()
-			token.setPosition(x+1,y+1)
-			token.setPosition(x,y)	
-		end			
+		local x, y = token.getPosition()
+		token.setPosition(x+1,y+1)
+		token.setPosition(x,y)	
+	else
+		requestOwnership(token, nHeight)
 	end
 			
 	if Session.IsHost and token.getOwner then
 	  DB.setOwner(ctNode, token.getOwner())
 	end
 	
-	notifyHeightChange()
+	--notifyHeightChange(ctNode)
+	notifyHeightChange("all")
 end
 
-function setUnits(units, suffix)
-	notchScale = units
+-- Displays the heights of all tokens
+function refreshHeights()
+	for _,ctNode in pairs(CombatManager.getCombatantNodes()) do
+		-- get the height value from the DB
+		local dbNode = DB.getChild(ctNode, "heightvalue")
+		local nHeight = 0
+		
+		if dbNode ~= nil and dbNode.getValue() ~= nil then
+			nHeight = tonumber(dbNode.getValue());   
+		end
+		
+		if (ctNode.isOwner() and bPlayerControl) or Session.IsHost then
+			DB.setValue(ctNode, "heightvalue", "number", nHeight)		
+		end
+
+	end
+	notifyHeightChange("all")
+end
+
+function updateUnits(image)
+	_, notchScale, suffix, _ = image.getImageSettings()
 	if suffix == '\'' then
 		heightUnits = ' ft'
 	elseif suffix == '' then
@@ -209,6 +225,17 @@ function setUnits(units, suffix)
 		heightUnits = suffix
 	end
 end
+
+--function setUnits(units, suffix)
+--	notchScale = units
+--	if suffix == '\'' then
+--		heightUnits = ' ft'
+--	elseif suffix == '' then
+--		heightUnits = ' sq'
+--	else
+--		heightUnits = suffix
+--	end
+--end
 
 function getHeight(ctNode)
 	local heightHolder = DB.getChild(ctNode, "heightvalue")
@@ -219,12 +246,50 @@ function getHeight(ctNode)
 	return nHeight
 end
 
+-- notifies clients that height changed
+function notifyHeightChange(ctNode)
+    local msgOOB = {}
+    msgOOB.type = OOB_MSGTYPE_TOKENHEIGHTCHANGE
+	msgOOB.node = ctNode
+    Comm.deliverOOBMessage(msgOOB)
+end
+
 -- notifies clients to update token height
-function updateTokenHeightIndicators()
+function updateTokenHeightIndicators(msgOOB)
     for _, ctNode in pairs(CombatManager.getCombatantNodes()) do
-        displayHeight(DB.getChild(ctNode, "heightvalue"))
+		if (msgOOB.node == "all") then
+			displayHeight(DB.getChild(ctNode, "heightvalue"))
+		elseif (msgOOB.node == tostring(ctNode)) then
+			-- TODO Figure out how to pass the reference to the node so it only updates once
+			displayHeight(DB.getChild(ctNode, "heightvalue"))
+			break
+		end
     end
 end
+
+-- requests host to grant ownership
+function requestOwnership(token, nHeight)
+	-- TODO Figure out how to pass token to host
+    local msgOOB = {}
+    msgOOB.type = OOB_MSGTYPE_REQUESTOWNERSHIP
+	msgOOB.token = token
+	msgOOB.newHeight = nHeight
+    Comm.deliverOOBMessage(msgOOB)
+end
+
+-- grant ownership
+function updateOwnership(msgOOB)
+	-- TODO ideally the client would pass the node and height, but not sure how to pass node, so set all the unowned owners here
+	if Session.IsHost then
+		for _, ctNode in pairs(CombatManager.getCombatantNodes()) do
+			local token = CombatManager.getTokenFromCT(ctNode)
+			if token and token.getOwner and not token.getOwner() then
+				DB.setOwner(ctNode, token.getOwner())
+			end
+		end
+	end
+end
+
 
 
 function displayHeight(heightWidget) 
@@ -238,6 +303,15 @@ function displayHeight(heightWidget)
 		return
 	end
 	local nHeight = 0
+
+	-- SilentRuin optimization
+	-- optimization requires reset of onMeasurePointer checks
+	local ctrlImage = ImageManager.getImageControl(ctToken, false)
+	if ctrlImage then
+		ctrlImage.ResetOptData()
+		updateUnits(ctrlImage)
+	end
+	
 	
 	if heightWidget.getValue() ~= nil then
         nHeight = tonumber(heightWidget.getValue());   
@@ -265,18 +339,6 @@ function displayHeight(heightWidget)
     end
 end
 
--- notifies clients that height changed
-function notifyHeightChange()
-    local msgOOB = {}
-    msgOOB.type = OOB_MSGTYPE_TOKENHEIGHTCHANGE
-    Comm.deliverOOBMessage(msgOOB)
-end
-
--- Force display of height upon first opening the map (client and server)
-function getWidgetList(tokenCT, sSet)
-	TokenHeight.updateHeight(tokenCT, 0, false)
-	return getWidgetList_orig(tokenCT, sSet)
-end
 
 -- Changes the location of the height indicator
 function changeOptions()
