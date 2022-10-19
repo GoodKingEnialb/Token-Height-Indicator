@@ -173,7 +173,6 @@ function updateHeight(token, notches, forceRangeArrowRedraw)
 	if not ctNode then
 		return
 	end
-	
     local dbNode = DB.getChild(ctNode, "heightvalue")
     local nHeight = 0
 	
@@ -239,13 +238,6 @@ function displayHeight(heightWidget)
 		return
 	end
 	local nHeight = 0
-
-	-- optimization requires reset of onMeasurePointer checks
-	local ctrlImage = ImageManager.getImageControl(ctToken, false)
-	if ctrlImage then
-		ctrlImage.ResetOptData()
-	end
-	
 	
 	if heightWidget.getValue() ~= nil then
         nHeight = tonumber(heightWidget.getValue());   

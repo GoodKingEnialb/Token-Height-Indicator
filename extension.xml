@@ -45,12 +45,13 @@
 		4.10 - Removed restriction for ruleset
 		4.11 - And fixed bug with 4.10
 		4.12 - Incorporated SilentRuin's performance updates and calls to super() in image.lua
+		4.13 - Additional performance improvements from SilentRuin
 -->
-<root version="4" release="12">
+<root version="4" release="13">
 	<announcement text="Token Height Indication v4.13 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, and SilentRuin" font="emotefont" icon="GKElogo" />
 	
 	<properties>
-		<name>Feature(test): Token Height Indication</name>
+		<name>Feature: Token Height Indication</name>
 		<version>4.13</version>
 		
 		<author>Good King Enialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, and bratch9</author>
