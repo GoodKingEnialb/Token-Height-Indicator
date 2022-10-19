@@ -14,11 +14,21 @@ function onInit()
 	
 	-- squirrel away original functions
 	updateEffectsHelper_orig = TokenManager.updateEffectsHelper
-	
+	onAdd_orig = Token.onAdd
+	onTokenAdd_orig = TokenManager.onTokenAdd
+	onTokenDelete_orig = TokenManager.onTokenDelete
+	getCTFromToken_orig = CombatManager.getCTFromToken
+	updateSizeHelper_orig = TokenManager.updateSizeHelper
+
 	-- override functions
 	Token.onWheel = onWheel
 	Token.getDistanceBetween = getDistanceBetween
 	Token.getTokensWithinDistance = getTokensWithinDistance
+
+	TokenManager.onTokenAdd = onTokenAdd
+	TokenManager.onTokenDelete = onTokenDelete
+	CombatManager.getCTFromToken = getCTFromToken
+	TokenManager.updateSizeHelper = updateSizeHelper
 
 	-- Register clients for height changes and server to give ownership if client tries to update first
     OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_TOKENHEIGHTCHANGE, updateTokenHeightIndicators)
@@ -150,9 +160,7 @@ function getTokensWithinDistance(sourceItem, distance)
    end		 
 end
 
--- Get all tokens within a shape (including the origin token).  Shapes supported are line, cube, sphere, cylinder, and cone.
--- Second point(x2,y2,z2) only applies to cones and lines, height only applies to cylinders, width only applies to lines.
--- For a cone, distance = length of cone, height = height of spherical cap (0 if not spherical), width = angle of cone in degrees (53 in 5e, 90 in 3.5)
+-- See image.getTokensWithinShapeFromToken for parameter details
 function getTokensWithinShape(originToken, shape, distance, height, width, azimuthalAngle, polarAngle)
 	local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(originToken, true)
 	if ctrlImage then
@@ -175,12 +183,13 @@ function updateHeight(token, notches)
     if not token then
         return
     end
-	
+
 	-- get the height value from the DB
     local ctNode = CombatManager.getCTFromToken(token)
 	if not ctNode then
 		return
 	end
+
     local dbNode = DB.getChild(ctNode, "heightvalue")
     local nHeight = 0
 	
@@ -193,52 +202,12 @@ function updateHeight(token, notches)
 	
 	if (ctNode.isOwner() and bPlayerControl) or Session.IsHost then
 		DB.setValue(ctNode, "heightvalue", "number", nHeight)
-		local x, y = token.getPosition()
-		token.setPosition(x+1,y+1)
-		token.setPosition(x,y)	
--- TEST TEST TEST
-print("SPHERE")
-theTokens = getTokensWithinShape(token, "sphere", 30, nil, nil, nil, nil, nil)
-if theTokens then
-	for _,oneToken in pairs(theTokens) do
-		print(oneToken.getName())
-	end
-else
-	print("No tokens in range")
-end
-
-print("CUBE")
-theTokens = getTokensWithinShape(token, "cube", 60, nil, nil, nil, nil, nil)
-if theTokens then
-	for _,oneToken in pairs(theTokens) do
-		print(oneToken.getName())
-	end
-else
-	print("No tokens in range")
-end
-
-print("CYLINDER")
-theTokens = getTokensWithinShape(token, "cylinder", 30, 20, nil, nil, nil, nil)
-if theTokens then
-	for _,oneToken in pairs(theTokens) do
-		print(oneToken.getName())
-	end
-else
-	print("No tokens in range")
-end
-
-print("CONE")
-local nx, ny = token.getPosition()
-local nz = nHeight
-theTokens = getTokensWithinShape(token, "cone", 30, 1, 53, 0, 0)
-if theTokens then
-	for _,oneToken in pairs(theTokens) do
-		print(oneToken.getName())
-	end
-else
-	print("No tokens in range")
-end
--- TEST TEST TEST
+		-- Jiggle the token to force a redraw of the range arrow
+		if (notches ~= 0) then
+			local x, y = token.getPosition()
+			token.setPosition(x+1,y+1)
+			token.setPosition(x,y)	
+		end
 	else
 		requestOwnership(token, nHeight)
 	end
@@ -247,8 +216,28 @@ end
 	  DB.setOwner(ctNode, token.getOwner())
 	end
 	
-	--notifyHeightChange(ctNode)
-	notifyHeightChange("all")
+	notifyHeightChange(ctNode)
+	--notifyHeightChange("all")
+end
+
+function setHeight(token, nHeight)
+    if not token then
+        return
+    end
+	-- get the height value from the DB
+    local ctNode = CombatManager.getCTFromToken(token)
+	if not ctNode then
+		return
+	end
+
+    local dbNode = DB.getChild(ctNode, "heightvalue")
+	
+	if (ctNode.isOwner() and bPlayerControl) or Session.IsHost then
+		DB.setValue(ctNode, "heightvalue", "number", nHeight)
+		local x, y = token.getPosition()
+		token.setPosition(x+1,y+1)
+		token.setPosition(x,y)	
+	end
 end
 
 -- Displays the heights of all tokens
@@ -285,21 +274,28 @@ end
 function notifyHeightChange(ctNode)
     local msgOOB = {}
     msgOOB.type = OOB_MSGTYPE_TOKENHEIGHTCHANGE
-	msgOOB.node = ctNode
+	msgOOB.sNode = ctNode.getNodeName()
     Comm.deliverOOBMessage(msgOOB)
 end
 
 -- notifies clients to update token height
 function updateTokenHeightIndicators(msgOOB)
-    for _, ctNode in pairs(CombatManager.getCombatantNodes()) do
-		if (msgOOB.node == "all") then
-			displayHeight(DB.getChild(ctNode, "heightvalue"))
-		elseif (msgOOB.node == tostring(ctNode)) then
-			-- TODO Figure out how to pass the reference to the node so it only updates once
-			displayHeight(DB.getChild(ctNode, "heightvalue"))
-			break
+	if (msgOOB.node == "all") then
+		for _, ctNode in pairs(CombatManager.getCombatantNodes()) do
+			if (msgOOB.node == "all") then
+				displayHeight(DB.getChild(ctNode, "heightvalue"))
+			elseif (msgOOB.node == tostring(ctNode)) then
+				-- TODO Figure out how to pass the reference to the node so it only updates once
+				displayHeight(DB.getChild(ctNode, "heightvalue"))
+				break
+			end
 		end
-    end
+	else
+		local ctNode = DB.findNode(msgOOB.sNode)
+		if ctNode then
+			displayHeight(DB.getChild(ctNode, "heightvalue"))
+		end
+	end
 end
 
 -- requests host to grant ownership
@@ -342,7 +338,7 @@ function displayHeight(heightWidget)
 	-- SilentRuin optimization
 	-- optimization requires reset of onMeasurePointer checks
 	local ctrlImage = ImageManager.getImageControl(ctToken, false)
-	if ctrlImage then
+	if ctrlImage and ctrlImage.ResetOptData then
 		ctrlImage.ResetOptData()
 		updateUnits(ctrlImage)
 	end
@@ -408,4 +404,36 @@ function changeOptions()
 			end
 		end
     end
+end
+
+-- Called when a token is first added to a map
+function onTokenAdd(tokenMap)
+	onTokenAdd_orig(tokenMap)
+	if Session.IsHost then
+		updateHeight(tokenMap, 0)
+	end
+end
+
+-- Called when a token is removed to a map
+function onTokenDelete(tokenMap)
+	if Session.IsHost then
+		setHeight(tokenMap, 0)
+	end
+	onTokenDelete_orig(tokenMap)
+end
+
+function getCTFromToken(token)
+	if token and token.getContainerNode then
+		return getCTFromToken_orig(token)
+	else
+		return nil
+	end
+end
+
+function updateSizeHelper(ctToken, ctNode)
+	updateSizeHelper_orig(ctToken, ctNode)
+	local ctrlImage = ImageManager.getImageControl(ctToken, false)
+	if ctrlImage then
+		ctrlImage.ResetOptData()
+	end
 end

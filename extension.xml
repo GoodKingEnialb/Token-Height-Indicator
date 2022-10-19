@@ -55,14 +55,18 @@
 		4.20 - Restored ability for players to adjust heights that hadn't been adjusted first by GM
 		4.21 - Fixed incompatibility with Aura Effects
 		4.22 - Print warning if token.size is undefined instead of error
-		5.0  - Provide ability to get tokens within a given shape
+		5.0  - Provide ability to get tokens within a given shape.  Show heights upon map loading.  Set heights to 0 when moving to new map.
+		5.1  - Updated to fix issues with large creatures and for future compability with Size Matters (ActorCommonManager.getSpaceReach)
+		5.2  - Reverted back to getting space from the DB instead of ActorCommonManager.getSpaceReach (doesn't work as expected when adjusting space)
+		5.3  - Fixed an incompatibility with the Assistant GM extension
+		5.4  - Only call THI code for add/delete on the server and optimized the token refresh, with help from SilentRuin
 -->
-<root version="5" release="0">
-	<announcement text="Token Height Indication v5.0 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, SilentRuin, and Arnagus" font="emotefont" icon="GKElogo" />
+<root version="5" release="4">
+	<announcement text="Token Height Indication v5.4 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, SilentRuin, and Arnagus" font="emotefont" icon="GKElogo" />
 	
 	<properties>
 		<name>Feature: Token Height Indication</name>
-		<version>4.21</version>
+		<version>5.4</version>
 		
 		<author>Good King Enialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, and bratch9</author>
 		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>
@@ -81,6 +85,7 @@
 		
 		<!-- scripts -->
 		<script name="TokenHeight" file="scripts/token_height_indication.lua" />
+		<script name="MathFunctions" file="scripts/math_functions.lua" />
 	
 		<!-- override coreRPG: /campaigns/scripts/image.lua -->			
 		<windowclass name="imagewindow" merge="join">
