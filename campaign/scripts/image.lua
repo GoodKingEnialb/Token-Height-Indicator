@@ -6,6 +6,7 @@ local lastUnits = 5
 local lastSuffix = "ft"
 local lastDiag = 0
 local OptData = {}
+local tolerance = 0.005
 
 function ResetOptData(hashtag)
 	if hashtag then
@@ -250,12 +251,12 @@ function onInit()
 	if super and super.onInit then
 		super.onInit()
 	end
-	
+
 	_, units, suffix, _ = getImageSettings()
---	TokenHeight.setUnits(units, suffix)
-	TokenHeight.refreshHeights()
+	
+	--TokenHeight.refreshHeights()
 	ResetOptData()
-end
+end	
 
 -- Distance between two locations in 3 dimensions.
 function distanceBetween(startx,starty,startz,endx,endy,endz,bSquare)
@@ -276,10 +277,12 @@ function distanceBetween(startx,starty,startz,endx,endy,endz,bSquare)
 		if diagmult == 1 then
 			-- Just a max of each dimension
 			local longestLeg = math.max(dx, dy, dz)		
-			totalDistance = math.floor(longestLeg/gridsize+0.5)*units
+--Debug.console("longestLeg = " .. longestLeg)
+			totalDistance = math.ceil(longestLeg/gridsize)*units
 		elseif diagmult == 0 then
 			-- Get 3D distance directly
 			local hyp = math.sqrt((dx^2)+(dy^2)+(dz^2))
+--Debug.console("hyp = " .. hyp)
 			totalDistance = (hyp / gridsize)* units
 		else 
 			if OptionsManager.getOption("THIDIAGONALS") == "short" then
@@ -297,7 +300,8 @@ function distanceBetween(startx,starty,startz,endx,endy,endz,bSquare)
 					mid = math.max(dx, dy)
 					diagonal = math.floor(math.ceil(mid/gridsize) / 2) * gridsize
 				end
-				totalDistance = math.floor((straight + diagonal) / gridsize)
+				totalDistance = math.ceil((straight + diagonal) / gridsize)
+--Debug.console("td = " .. totalDistance)
 				totalDistance = totalDistance * units
 			else
 				-- You get full amount of the longest path and half from each of the others
@@ -310,7 +314,8 @@ function distanceBetween(startx,starty,startz,endx,endy,endz,bSquare)
 				else	
 					diagonal = math.floor((math.ceil(dx/gridsize) + math.ceil(dy/gridsize)) / 2) * gridsize
 				end
-				totalDistance = math.floor((straight + diagonal) / gridsize)
+				totalDistance = math.ceil((straight + diagonal) / gridsize)
+--Debug.console("td = " .. totalDistance)
 				totalDistance = totalDistance * units
 			end
 		end
@@ -327,15 +332,12 @@ function onMeasurePointer(pixellength,pointertype,startx,starty,endx,endy)
 		retStr = super.onMeasurePointer(pixellength, pointertype, startx, starty, endx, endy)
 	end
 
-	local hashtag = tostring(startx) .. tostring(starty) .. tostring(endx) .. tostring(endy)
+	local gridsize, units, suffix, diagmult = getImageSettings()
+	local hashtag = tostring(startx) .. tostring(starty) .. tostring(endx) .. tostring(endy) .. tostring(diagmult)
 	if OptData and OptData[hashtag] and 
 		OptData[hashtag].pixellength == pixellength and 
-		OptData[hashtag].pointertype == pointertype then 
-		if OptData[hashtag].retStr then
+		OptData[hashtag].pointertype == pointertype and OptData[hashtag].retStr then 
 			return OptData[hashtag].retStr
-		else
-			return retStr
-		end
 	end
 	ResetOptData(hashtag)
 
@@ -343,13 +345,7 @@ function onMeasurePointer(pixellength,pointertype,startx,starty,endx,endy)
 	if ctNodeOrigin and ctNodeTarget then
 		local heightOrigin = TokenHeight.getHeight(ctNodeOrigin)
 		local heightTarget = TokenHeight.getHeight(ctNodeTarget)
-		-- If height is on same plane then we don't need to waste time doing anything
-		if heightOrigin == heightTarget then
-			OptData[hashtag] = {pixellength = pixellength, pointertype = pointertype, endx = endx, endy = endy, retStr = nil}
-			return retStr
-		end
 		
-		local gridsize, units, suffix, diagmult = getImageSettings()
 		if not (gridsize and units and suffix and diagmult) then 
 			OptData[hashtag] = {pixellength = pixellength, pointertype = pointertype, endx = endx, endy = endy, retStr = nil}
 			return retStr
@@ -457,11 +453,19 @@ function exactMatch(startx, starty, endx, endy, sizeMultiplier, gridsize)
 	elseif mody < starty then
 		mody = mody + gridsize * sizeMultiplier
 	end		
-	if modx == startx and mody == starty then
+--	if modx == startx and mody == starty then
+	if closeEnough(modx, startx) and closeEnough(mody, starty) then
 		equal = true
 	end
-
 	return equal
+end
+
+function closeEnough(value1, value2)
+    if ((value1 + tolerance > value2) and (value1 - tolerance < value2)) then
+		return true
+	else
+		return false
+	end
 end
 
 function matchWithinSize(startx, starty, endx, endy, sizeMultiplier, gridsize)

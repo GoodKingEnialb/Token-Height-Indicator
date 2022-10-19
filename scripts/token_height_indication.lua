@@ -1,5 +1,4 @@
 -- Variables
-local getWidgetList_orig = nil
 local notchScale = 5
 local heightUnits = ' ft'
 local bFoundUnits = false
@@ -8,6 +7,7 @@ local bPlayerControl = true
 
 OOB_MSGTYPE_TOKENHEIGHTCHANGE = "UpdateHeightIndicator"
 OOB_MSGTYPE_REQUESTOWNERSHIP = "RequestTokenOwnership"
+OOB_MSGTYPE_REFRESHHEIGHTS = "RefreshHeights"
 	
 function onInit()
 	registerOptions()
@@ -23,7 +23,7 @@ function onInit()
 	-- Register clients for height changes and server to give ownership if client tries to update first
     OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_TOKENHEIGHTCHANGE, updateTokenHeightIndicators)
     OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_REQUESTOWNERSHIP, updateOwnership)
-	
+	OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_REFRESHHEIGHTS, refreshHeights)
 end
 
 -- registerOptions fixed by bmos (removed duplicate entries between labels/values and baselabel/baseval)
@@ -198,21 +198,12 @@ end
 
 -- Displays the heights of all tokens
 function refreshHeights()
-	for _,ctNode in pairs(CombatManager.getCombatantNodes()) do
-		-- get the height value from the DB
-		local dbNode = DB.getChild(ctNode, "heightvalue")
-		local nHeight = 0
-		
-		if dbNode ~= nil and dbNode.getValue() ~= nil then
-			nHeight = tonumber(dbNode.getValue());   
+	--if Session.IsHost then
+		for _,ctNode in pairs(CombatManager.getCombatantNodes()) do
+			local token = CombatManager.getTokenFromCT(ctNode)
+			updateHeight(token, 0)	
 		end
-		
-		if (ctNode.isOwner() and bPlayerControl) or Session.IsHost then
-			DB.setValue(ctNode, "heightvalue", "number", nHeight)		
-		end
-
-	end
-	notifyHeightChange("all")
+	--end
 end
 
 function updateUnits(image)
@@ -283,7 +274,7 @@ function updateOwnership(msgOOB)
 	if Session.IsHost then
 		for _, ctNode in pairs(CombatManager.getCombatantNodes()) do
 			local token = CombatManager.getTokenFromCT(ctNode)
-			if token and token.getOwner and not token.getOwner() then
+			if token and token.getOwner then
 				DB.setOwner(ctNode, token.getOwner())
 			end
 		end

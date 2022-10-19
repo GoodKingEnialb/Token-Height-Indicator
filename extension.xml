@@ -50,13 +50,17 @@
 		4.15 - Incorporated Arnagus fix for targets on multiple maps
 		4.16 - Fixed bug where first time clients couldn't update height by themselves
 		4.17 - Work with multiple maps open at the same time with different units
+		4.18 - Allow tokens to be slightly skewed (helps on hex maps). Still calculate when heights are the same for consistency with diagonal logic and rounding.
+		4.19 - Made half-squares consistent with base FGU
+		4.20 - Restored ability for players to adjust heights that hadn't been adjusted first by GM
+		4.21 - Fixed incompatibility with Aura Effects
 -->
-<root version="4" release="17">
-	<announcement text="Token Height Indication v4.17 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, SilentRuin, and Arnagus" font="emotefont" icon="GKElogo" />
+<root version="4" release="21">
+	<announcement text="Token Height Indication v4.20 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, SilentRuin, and Arnagus" font="emotefont" icon="GKElogo" />
 	
 	<properties>
 		<name>Feature: Token Height Indication</name>
-		<version>4.17</version>
+		<version>4.21</version>
 		
 		<author>Good King Enialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, and bratch9</author>
 		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>
