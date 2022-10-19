@@ -14,20 +14,38 @@
 		1.4 - Players can set height to 0.  Heights shown automatically instead of only when DM first alters them.
 		1.5 - Protect against empty combat tokens
 		1.6 - Use height in the range arrow
+		1.7 - Protected against a token without getOwner()
+		1.8 - Removed need for grid, update range display without losing/gaining focus
+		1.9 - Removed conflict with 5E - Aura Effects
+		1.10 - Override getDistanceBetween to allow other extensions to get distance with height
+		1.11 - Fix the error in variant diagonals
+		2.0  - Support for more rulesets, fixed another error in variant diagonals
+		2.1  - Support for 4E and the "raw" flag on individual maps
+		3.0  - Add options for height indicator placement and fonts
+		3.1  - Allow for arbitrary token sizes, squares give correct measurements.
 -->
-<root version="1.6" release="1">
-	<announcement text="5E Height Indication v1.6 by GKEnialb" font="emotefont" icon="GKElogo" />
+<root version="3" release="1">
+	<announcement text="Token Height Indication v3.1 by GKEnialb" font="emotefont" icon="GKElogo" />
 	
 	<properties>
-		<name>5E Height Indication</name>
-		<version>1.6</version>
+		<name>Token Height Indication</name>
+		<version>3.1</version>
 		
-		<author>Good King Enialb</author>
+		<author>Good King Enialb with input from bmos, kevininrussia, and SoxMax</author>
 		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>
 		
 		<ruleset>
 			<name>5E</name>
+		</ruleset>		
+		<ruleset>
+			<name>PFRPG</name>
 		</ruleset>			
+		<ruleset>
+			<name>3.5E</name>
+		</ruleset>	
+		<ruleset>
+			<name>4E</name>
+		</ruleset>		
 	</properties>    	
 
 	<base>	
@@ -36,18 +54,21 @@
 		
 		<!-- strings -->
 		<includefile source="strings/height_strings.xml"/>
+
+		<!-- font -->
+		<includefile source="graphics/graphics_fonts.xml" />
 		
 		<!-- scripts -->
 		<script name="TokenHeight" file="scripts/token_height_indication.lua" />
 	
 		<!-- override coreRPG: /campaigns/scripts/image.lua -->			
-		<template name="image_record_step">
-			<imagecontrol name="image">
-				<indicators locked="image_locked" loading="image_loading" />
-				<default snap="on" drawingsize="500,500" />
-				<script file="campaign/scripts/image.lua" />
-			</imagecontrol>
-		</template>	
+		<windowclass name="imagewindow" merge="join">
+			<sheetdata>
+				<image_record name="image">
+					<script file="campaign/scripts/image.lua" />
+				</image_record>
+			</sheetdata>
+		</windowclass>
 	</base>	
 
 </root>

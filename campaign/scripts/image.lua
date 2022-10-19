@@ -1,117 +1,96 @@
--- 
--- Please see the license.html file included with this distribution for 
--- attribution and copyright information.
---
-----------------------------------------------------------------
--- TOP PORTION COPIED FROM CoreRPG campaign/scripts/image.lua --
-----------------------------------------------------------------
-
-function onInit()
-	if Session.IsHost then
-		setTokenOrientationMode(false);
-	end
-	onCursorModeChanged();
-end
-
-function onCursorModeChanged(sTool)
-	window.onCursorModeChanged();
-end
-
-function onMaskingStateChanged(sTool)
-	window.onMaskingStateChanged();
-end
-
-function onGridStateChanged(gridtype)
-	window.onGridStateChanged();
-end
-
-function onTokenLockStateChanged(bLocked)
-	window.onTokenLockStateChanged();
-end
-
-function onTargetSelect(aTargets)
-	local aSelected = getSelectedTokens();
-	if #aSelected == 0 then
-		local tokenActive = TargetingManager.getActiveToken(self);
-		if tokenActive then
-			local bAllTargeted = true;
-			for _,vToken in ipairs(aTargets) do
-				if not vToken.isTargetedBy(tokenActive) then
-					bAllTargeted = false;
-					break;
-				end
-			end
-			
-			for _,vToken in ipairs(aTargets) do
-				tokenActive.setTarget(not bAllTargeted, vToken);
-			end
-			return true;
-		end
-	end
-end
-
-function onDrop(x, y, draginfo)
-	local sDragType = draginfo.getType();
-	
-	if sDragType == "shortcut" then
-		local sClass,_ = draginfo.getShortcutData();
-		if sClass == "charsheet" then
-			if not Input.isShiftPressed() then
-				return true;
-			end
-		end
-		
-	elseif sDragType == "combattrackerff" then
-		return CombatManager.handleFactionDropOnImage(draginfo, self, x, y);
-	end
-end
-
 ----------------------
 -- CUSTOM ADDITIONS --
 ----------------------
+local getDistanceBetween_orig
+
+local function getDistanceBetween(sourceToken, targetToken)
+	if not sourceToken or not targetToken then
+		return
+	end
+	
+	local gridsize = getGridSize()
+	local units = getDistanceBaseUnits()
+	
+	local startz = 0
+	local endz = 0
+
+	local ctNodeOrigin = CombatManager.getCTFromToken(sourceToken)
+	if ctNodeOrigin then
+		startz = TokenHeight.getHeight(ctNodeOrigin) * gridsize / units
+	
+		local ctNodeTarget = CombatManager.getCTFromToken(targetToken)
+		if ctNodeTarget then
+			endz = TokenHeight.getHeight(ctNodeTarget) * gridsize / units
+		end
+	end
+	
+	local startx, starty = sourceToken.getPosition()
+	local endx, endy = targetToken.getPosition()
+	
+	local nDistance = distanceBetween(startx,starty,startz,endx,endy,endz,false)
+
+	return nDistance
+end
+
+function onInit()
+	if super and super.onInit() then
+		super.onInit()
+	end
+	getDistanceBetween_orig = Token.getDistanceBetween
+	Token.getDistanceBetween = getDistanceBetween
+end
 
 function onMeasurePointer(pixellength,pointertype,startx,starty,endx,endy)
+	if not (getGridSize and getDistanceBaseUnits and getDistanceSuffix and Interface.getDistanceDiagMult and getDistanceDiagMult) then
+		return ""
+	end
+	
 	local gridsize = getGridSize()
 	local units = getDistanceBaseUnits()
 	local suffix = getDistanceSuffix()
 	local diagMult = Interface.getDistanceDiagMult()
+	if getDistanceDiagMult() == 0 then
+		diagMult = 0
+	end
+	local bSquare = false
+	if pointertype == "rectangle" then
+		bSquare = true
+	end
 
-	if hasGrid() then
-		local startz = 0
-		local endz = 0
-		local bToken = false
-				
-		local ctNodeOrigin = getCTNodeAt(startx,starty,gridsize)
-		if ctNodeOrigin then
-			local ctNodeTarget = getCTNodeAt(endx,endy,gridsize)
+	local startz = 0
+	local endz = 0
 			
-			if ctNodeTarget then
-				startz = TokenHeight.getHeight(ctNodeOrigin) * gridsize / units
-				endz = TokenHeight.getHeight(ctNodeTarget) * gridsize / units
-				bToken = true
-			end
-		end
+	local ctNodeOrigin = getCTNodeAt(startx,starty,gridsize)
+	if ctNodeOrigin then
+		local ctNodeTarget = getCTNodeAt(endx,endy,gridsize)
 		
-		local distance = distanceBetween(startx,starty,startz,endx,endy,endz,bToken)
-		if distance == 0 then
-			return ""
-		else
-			local stringDistance = nil
-			if diagMult == 0 then
-				stringDistance = string.format("%.1f", distance)
-			else
-				stringDistance = string.format("%.0f", distance)	
-			end
-			return stringDistance .. suffix
+		if ctNodeTarget then
+			startz = TokenHeight.getHeight(ctNodeOrigin) * gridsize / units
+			endz = TokenHeight.getHeight(ctNodeTarget) * gridsize / units
 		end
-	else
+	end
+	
+	local distance = distanceBetween(startx,starty,startz,endx,endy,endz,bSquare)
+	if distance == 0 then
 		return ""
+	else
+		local stringDistance = nil
+		if diagMult == 0 then
+			stringDistance = string.format("%.1f", distance)
+		else
+			stringDistance = string.format("%.0f", distance)	
+		end
+		return stringDistance .. suffix
 	end
 end
 
--- Distance between two locations in 3 dimensions.  bToken should be true for tokens and false otherwise
-function distanceBetween(startx,starty,startz,endx,endy,endz,bToken)
+-- Distance between two locations in 3 dimensions.
+function distanceBetween(startx,starty,startz,endx,endy,endz,bSquare)
 	local diagMult = Interface.getDistanceDiagMult()
+	if getDistanceDiagMult() == 0 then
+		diagMult = 0
+	end
+	
 	local units = getDistanceBaseUnits()
 	local gridsize = getGridSize()
 	local totalDistance = 0
@@ -119,29 +98,32 @@ function distanceBetween(startx,starty,startz,endx,endy,endz,bToken)
 	local dy = math.abs(endy-starty)
 	local dz = math.abs(endz-startz)
 	
-	if diagMult == 1 then
-		-- Just a max of each dimension
-		local longestLeg = math.max(dx, dy, dz)
-		totalDistance = math.floor(longestLeg/gridsize+0.5)*units
-
-	elseif diagMult == 0 then
-		-- Get 3D distance directly
+	if bSquare then
 		local hyp = math.sqrt((dx^2)+(dy^2)+(dz^2))
-		totalDistance = (hyp / gridsize)* units
-	else 	
-		-- You get full amount of the longest path and half from each of the others
-		local longest = math.max(dx, dy, dz)
-		if longest == dx then
-			totalDistance = dx + (dy+dz)/2
-		elseif longest == dy then
-			totalDistance = dy + (dx+dz)/2
-		else	
-			totalDistance = dz + (dx+dy)/2
+		totalDistance = (hyp / gridsize)* units * 2
+	else
+		if diagMult == 1 then
+			-- Just a max of each dimension
+			local longestLeg = math.max(dx, dy, dz)		
+			totalDistance = math.floor(longestLeg/gridsize+0.5)*units
+		elseif diagMult == 0 then
+			-- Get 3D distance directly
+			local hyp = math.sqrt((dx^2)+(dy^2)+(dz^2))
+			totalDistance = (hyp / gridsize)* units
+		else 	
+			-- You get full amount of the longest path and half from each of the others
+			local straight = math.max(dx, dy, dz)
+			local diagonal = 0
+			if straight == dx then
+				diagonal = math.floor((math.ceil(dy/gridsize) + math.ceil(dz/gridsize)) / 2) * gridsize
+			elseif straight == dy then
+				diagonal = math.floor((math.ceil(dx/gridsize) + math.ceil(dz/gridsize)) / 2) * gridsize
+			else	
+				diagonal = math.floor((math.ceil(dx/gridsize) + math.ceil(dy/gridsize)) / 2) * gridsize
+			end
+			totalDistance = math.floor((straight + diagonal) / gridsize)
+			totalDistance = totalDistance * units
 		end
-		
-		-- Convert to feet
-		totalDistance = (totalDistance / gridsize + 0.5) * units	
-		totalDistance = math.floor(totalDistance / units) * units		
 	end
 		
 	return totalDistance
@@ -153,38 +135,45 @@ end
 
 function getCTNodeAt(basex, basey, gridsize)
 	local allTokens = getTokens()
-	local theToken = nil
 	for _, oneToken in pairs(allTokens) do
-		x,y = oneToken.getPosition()
+		local x,y = oneToken.getPosition()
 		local ctNode = CombatManager.getCTFromToken(oneToken)
-
-		local sSize = StringManager.trim(DB.getValue(ctNode, "size", ""):lower());
 		local bExact = true
 		local sizeMultiplier = 0
-		if sSize == "large" then
-			sizeMultiplier = 0.5
-		elseif sSize == "huge" then
-			sizeMultiplier = 1
-		elseif sSize == "gargantuan" then
-			-- Gargantuan creatures behave a bit differently. Can be anywhere within bounds
-			sizeMultiplier = 1.5
-			bExact = false
-		end
-		
-		local found = false
+			
+--		if (User.getRulesetName() == "5E") then
+--			local sSize = StringManager.trim(DB.getValue(ctNode, "size", ""):lower());
+--
+--			if sSize == "large" then
+--				sizeMultiplier = 0.5
+--			elseif sSize == "huge" then
+--				sizeMultiplier = 1
+--			elseif sSize == "gargantuan" then
+--				-- Gargantuan creatures behave a bit differently. Can be anywhere within bounds
+--				sizeMultiplier = 1.5
+--				bExact = false
+--			end
+--		else
+			--bmos / SoxMax supporting other rulesets	
+			local distancePerGrid = GameSystem.getDistanceUnitsPerGrid()
+			local nSpace = DB.getValue(ctNode, "space");
+			sizeMultiplier = ((nSpace / distancePerGrid ) - 1) * 0.5
+			if nSpace > distancePerGrid * 2 and nSpace % (distancePerGrid * 2) > 0 then
+				bExact = false
+			end
+--		end
+
+		local bFound = false
 		if bExact then
-			found = exactMatch(basex, basey, x, y, sizeMultiplier, gridsize)
+			bFound = exactMatch(basex, basey, x, y, sizeMultiplier, gridsize)
 		else
-			found = matchWithinSize(basex, basey, x, y, sizeMultiplier, gridsize)
+			bFound = matchWithinSize(basex, basey, x, y, sizeMultiplier, gridsize)
 		end
-		
-		if found then
-			local ctNode = CombatManager.getCTFromToken(oneToken)
-			theToken = ctNode
-			break
+
+		if bFound then
+			return ctNode
 		end
     end
-	return theToken
 end
 
 function exactMatch(startx, starty, endx, endy, sizeMultiplier, gridsize)

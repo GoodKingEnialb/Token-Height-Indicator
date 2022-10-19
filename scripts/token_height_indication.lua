@@ -1,6 +1,10 @@
 -- Variables
 local onWheel_orig = nil
 local getWidgetList_orig = nil
+local notchScale = 5
+local heightUnits = ' ft'
+local heightFont = ''
+local bPlayerControl = true
 OOB_MSGTYPE_TOKENHEIGHTCHANGE = "UpdateHeightIndicator"
 
 function onInit()
@@ -22,17 +26,85 @@ function onInit()
 	-- Register clients for height changes
     OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_TOKENHEIGHTCHANGE, updateTokenHeightIndicators)
 	
+	if (User.getRulesetName() == "4E") then
+		notchScale = 1
+		heightUnits = ' sq'
+	end
 end
 
 function registerOptions()
-    OptionsManager.registerOption2("THIALLOWUSERADJUST", false, "option_header_height_indicator", "option_label_allow_player_mod", "option_entry_cycler",
-		{ labels = "option_val_yes", values = "Yes", baselabel = "option_val_no", baseval = "No", default = "Yes" })
+	OptionsManager.registerOption2 (
+        "THIALLOWUSERADJUST",
+        false,
+        "option_header_height_indicator",
+        "option_label_allow_player_mod",
+        "option_entry_cycler",
+        {
+            labels = "option_val_yes|option_val_no",
+            values = "yes|no",
+            baselabel = "option_val_yes",
+            baseval = "yes",
+            default = "yes"
+        }
+    ) 
+	OptionsManager.registerOption2 (
+        "THIPOSITION",
+        false,
+        "option_header_height_indicator",
+        "option_label_height_position",
+        "option_entry_cycler",
+        {
+            labels = "option_val_top|option_val_top_right|option_val_right|option_val_bottom_right|option_val_bottom|option_val_bottom_left|option_val_left|option_val_top_left",
+            values = "top|top right|right|bottom right|bottom|bottom left|left|top left",
+            baselabel = "option_val_top",
+            baseval = "top",
+            default = "bottom"
+        }
+    ) 
+	OptionsManager.registerOption2 (
+        "THIFONT",
+        false,
+        "option_header_height_indicator",
+        "option_label_font",
+        "option_entry_cycler",
+        {
+            labels = "option_val_medium|option_val_large",
+            values = "medium|large",
+            baselabel = "option_val_medium",
+            baseval = "medium",
+            default = "medium"
+        }
+    ) 
+	
+	OptionsManager.registerCallback("THIALLOWUSERADJUST", setPlayerControl)
+	OptionsManager.registerCallback("THIPOSITION", changeOptions)
+	OptionsManager.registerCallback("THIFONT", changeOptions)
+	setFont()
+end
+
+function setPlayerControl()
+	if OptionsManager.getOption("THIALLOWUSERADJUST") == "yes" then
+		bPlayerControl = true
+	else
+		bPlayerControl = false
+	end
+end
+
+function setFont()
+	local sFontOption = OptionsManager.getOption("THIFONT")
+	if sFontOption == "medium" then
+		heightFont = "height_medium"
+	elseif sFontOption == "large" then
+		heightFont = "height_large"		
+	else
+		heightFont = ''
+	end
 end
 
 function onWheel(tokenCT, notches)
 	local stopProcessing = true
     if Input.isAltPressed() then  
-		TokenHeight.updateHeight(tokenCT, notches)
+		TokenHeight.updateHeight(tokenCT, notches, true)
 	elseif Input.isShiftPressed() then
 		local oldOrientation = tokenCT.getOrientation()
 		local newOrientation = (oldOrientation+notches)%8
@@ -75,7 +147,7 @@ function dbWatcher(node)
 end
 
 -- Sets and displays the height of the token
-function updateHeight(token, notches)
+function updateHeight(token, notches, forceRangeArrowRedraw)
 
     if not token then
         return
@@ -94,13 +166,18 @@ function updateHeight(token, notches)
     end
 	
     -- update height
-    nHeight = nHeight + (5 * notches)
+    nHeight = nHeight + (notchScale * notches)
 	
-	if (ctNode.isOwner() and OptionsManager.isOption("THIALLOWUSERADJUST", "Yes")) or User.isHost() then
+	if (ctNode.isOwner() and bPlayerControl) or Session.IsHost then
 		DB.setValue(ctNode, "heightvalue", "number", nHeight)
+		if forceRangeArrowRedraw then
+			local x, y = token.getPosition()
+			token.setPosition(x+1,y+1)
+			token.setPosition(x,y)	
+		end			
 	end
 			
-	if User.isHost() then
+	if Session.IsHost and token.getOwner then
 	  DB.setOwner(ctNode, token.getOwner())
 	end
 	
@@ -143,20 +220,22 @@ function displayHeight(heightWidget)
 	local widget = ctToken.findWidget("heightindication")
 	if widget == nil then
 		widget = ctToken.addTextWidget( "mini_name", '' )
+		if heightFont ~= '' then
+			widget.setFont(heightFont)
+		end
 		widget.setName("heightindication"); 
 		widget.setFrame('mini_name', 5, 1, 5, 1)
-		widget.setPosition("bottom", 0, 0)
+		--if OptionsManager.isOption("THIPOSITION", "Bottom")
+		--option_val_top|option_val_right|option_val_bottom|option_val_left
+		widget.setPosition(OptionsManager.getOption("THIPOSITION"), 0, 0)
 	end
 	
 	-- manage CT DB entry
     if nHeight == 0 then
-        --DB.deleteChild(ctNode, "heightvalue")
-
 		widget.setVisible(false)
-		--widget.destroy()
     else
 		-- update height display        
-		widget.setText(nHeight .. ' ft.')
+		widget.setText(nHeight .. heightUnits)
 		widget.bringToFront();       
 		widget.setVisible(true)
     end
@@ -171,6 +250,47 @@ end
 
 -- Force display of height upon first opening the map (client and server)
 function getWidgetList(tokenCT, sSet)
-	TokenHeight.updateHeight(tokenCT, 0)
+	TokenHeight.updateHeight(tokenCT, 0, false)
 	return getWidgetList_orig(tokenCT, sSet)
+end
+
+-- Changes the location of the height indicator
+function changeOptions()
+	setFont()
+	for _, ctNode in pairs(CombatManager.getCombatantNodes()) do
+	    local ctToken = CombatManager.getTokenFromCT(ctNode)
+		if not (ctToken) then
+			return
+		end
+		local widget = ctToken.findWidget("heightindication")
+		if not (widget) then
+			return
+		end
+		
+		local dbNode = DB.getChild(ctNode, "heightvalue")
+		local nHeight = 0
+		
+		if dbNode ~= nil and dbNode.getValue() ~= nil then
+			nHeight = tonumber(dbNode.getValue());   
+		end
+		
+		--DB.deleteChild(ctNode, "heightvalue")
+		widget.destroy()
+
+		if nHeight ~= 0 then
+			widget = ctToken.addTextWidget( "mini_name", '' )
+			if heightFont ~= '' then
+				widget.setFont(heightFont)
+			end
+			widget.setName("heightindication"); 
+			widget.setFrame('mini_name', 5, 1, 5, 1)
+			widget.setPosition(OptionsManager.getOption("THIPOSITION"), 0, 0)
+		
+			-- update height display        
+			widget.setText(nHeight .. heightUnits)
+			widget.bringToFront();       
+			widget.setVisible(true)
+		end		
+
+    end
 end

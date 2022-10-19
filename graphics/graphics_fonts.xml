@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<root>
+	<!-- Token Height Font-->
+	<font name="height_medium">
+		<ttf file="graphics/fonts/Roboto-Medium.ttf" name="Roboto Medium" size="15" />
+		<color value="#000000" />
+		<shadow offset="1,1" color="#808080" />
+	</font>
+	
+	<font name="height_large">
+		<ttf file="graphics/fonts/Roboto-Medium.ttf" name="Roboto Medium" size="20" />
+		<color value="#000000" />
+		<shadow offset="1,1" color="#808080" />
+	</font>
+</root>
+

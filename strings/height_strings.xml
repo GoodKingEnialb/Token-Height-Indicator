@@ -3,9 +3,22 @@
 	<!-- OPTIONS -->
 	<string name="option_header_height_indicator">Token Height Indicator</string>
 	<string name="option_label_allow_player_mod">Players can change height?</string>
-
+	<string name="option_label_height_position">Location of indicator</string>
+	<string name="option_label_font">Font Size</string>
+		
+		
 	<!-- VALUES -->
-	<string name="option_val_yes">Yes</string>
-	<string name="option_val_no">No</string>
-
+	<string name="option_val_yes">yes</string>
+	<string name="option_val_no">no</string>
+	<string name="option_val_top">top</string>
+	<string name="option_val_top_right">top right</string>
+	<string name="option_val_right">right</string>
+	<string name="option_val_bottom_right">bottom right</string>
+	<string name="option_val_bottom">bottom</string>
+	<string name="option_val_bottom_left">bottom left</string>
+	<string name="option_val_left">left</string>
+	<string name="option_val_top_left">top left</string>
+	
+	<string name="option_val_medium">medium</string>
+	<string name="option_val_large">large</string>
 </root>
