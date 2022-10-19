@@ -23,29 +23,39 @@
 		2.1  - Support for 4E and the "raw" flag on individual maps
 		3.0  - Add options for height indicator placement and fonts
 		3.1  - Allow for arbitrary token sizes, squares give correct measurements.
+		3.2  - New updates for token sizes and map options by bmos, mattekure, and SoxMax
+		3.3  - Fixed getDistanceBetween
+		3.4  - Try to keep going when some functions disappear...
+		3.5  - Remove errors from non-combat tracker tokens
+		3.6  - Fixed error with a slope of 0
+		3.7  - Reverted override of image.lua in extensions to fix image functions from disappearing. Fixed conflict with Critically Awesome Essentials.
+		3.8  - Fixed issue with reverting to original image functions when maximizing window / sending to back
+		3.9  - Fixed issue with dropping tokens with thanks to bratch9
+		3.10 - Work around a case where Interface disappears
+		4.0  - Added new diagonal measurement for variant
+		4.1  - Changed all local functions to just functions in an attempt to remove the disappearing functions bug
+		4.2  - Applied bmos's fix for calling getDistanceBetween with coordinates instead of tokens leading to error spamming
+		4.3  - Added diagonal option for short/long diagonals when variant diagonals are used (previously just for PFRPG2).  Added Starfinder as supported ruleset.  Added support for tokenids in getDistanceBetween.
+		4.4  - Added a guard for CombatManager disappearing per suggestion from bmos, just in case
+		4.5  - Overrode imagecontrol getTokensWithinDistance to allow other extensions which call that to take height into account.  Overrode Token versions of getDistanceBetween and getTokensWithinDistance to call the imagecontrol versions.  Return 0 instead of nil in getDistanceBetween if CombatManager disappeared.
+		4.6  - Added font color options
+		4.7  - Fixed typo found by bmos in Token.getDistanceBetween 
+		4.8  - Return the correct token type in getTokensWithinDistance
+		4.9  - Incorporated Kelrugem's fix for using the scroll-wheel without key-modifier and bmos's fix for needing an extra click to wrap around options
+		4.10 - Removed restriction for ruleset
+		4.11 - And fixed bug with 4.10
+		4.12 - Incorporated SilentRuin's performance updates and calls to super() in image.lua
 -->
-<root version="3" release="1">
-	<announcement text="Token Height Indication v3.1 by GKEnialb" font="emotefont" icon="GKElogo" />
+<root version="4" release="12">
+	<announcement text="Token Height Indication v4.13 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, and SilentRuin" font="emotefont" icon="GKElogo" />
 	
 	<properties>
-		<name>Token Height Indication</name>
-		<version>3.1</version>
+		<name>Feature(test): Token Height Indication</name>
+		<version>4.13</version>
 		
-		<author>Good King Enialb with input from bmos, kevininrussia, and SoxMax</author>
+		<author>Good King Enialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, and bratch9</author>
 		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>
-		
-		<ruleset>
-			<name>5E</name>
-		</ruleset>		
-		<ruleset>
-			<name>PFRPG</name>
-		</ruleset>			
-		<ruleset>
-			<name>3.5E</name>
-		</ruleset>	
-		<ruleset>
-			<name>4E</name>
-		</ruleset>		
+	
 	</properties>    	
 
 	<base>	
@@ -67,6 +77,13 @@
 				<image_record name="image">
 					<script file="campaign/scripts/image.lua" />
 				</image_record>
+			</sheetdata>
+		</windowclass>
+		<windowclass name="imagepanelwindow" merge="join">
+			<sheetdata>
+				<imagepanel_record name="image">
+					<script file="campaign/scripts/image.lua" />
+				</imagepanel_record>
 			</sheetdata>
 		</windowclass>
 	</base>	

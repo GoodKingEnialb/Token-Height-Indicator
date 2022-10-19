@@ -2,15 +2,39 @@
 
 <root>
 	<!-- Token Height Font-->
-	<font name="height_medium">
+	<font name="height_medium_dark">
 		<ttf file="graphics/fonts/Roboto-Medium.ttf" name="Roboto Medium" size="15" />
 		<color value="#000000" />
 		<shadow offset="1,1" color="#808080" />
 	</font>
 	
-	<font name="height_large">
+	<font name="height_large_dark">
 		<ttf file="graphics/fonts/Roboto-Medium.ttf" name="Roboto Medium" size="20" />
 		<color value="#000000" />
+		<shadow offset="1,1" color="#808080" />
+	</font>
+	
+	<font name="height_medium_medium">
+		<ttf file="graphics/fonts/Roboto-Medium.ttf" name="Roboto Medium" size="15" />
+		<color value="#808080" />
+		<shadow offset="1,1" color="#404040" />
+	</font>
+	
+	<font name="height_large_medium">
+		<ttf file="graphics/fonts/Roboto-Medium.ttf" name="Roboto Medium" size="20" />
+		<color value="#808080" />
+		<shadow offset="1,1" color="#404040" />
+	</font>
+	
+	<font name="height_medium_light">
+		<ttf file="graphics/fonts/Roboto-Medium.ttf" name="Roboto Medium" size="15" />
+		<color value="#FFFFFF" />
+		<shadow offset="1,1" color="#808080" />
+	</font>
+	
+	<font name="height_large_light">
+		<ttf file="graphics/fonts/Roboto-Medium.ttf" name="Roboto Medium" size="20" />
+		<color value="#FFFFFF" />
 		<shadow offset="1,1" color="#808080" />
 	</font>
 </root>

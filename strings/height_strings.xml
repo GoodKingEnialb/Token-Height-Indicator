@@ -4,8 +4,9 @@
 	<string name="option_header_height_indicator">Token Height Indicator</string>
 	<string name="option_label_allow_player_mod">Players can change height?</string>
 	<string name="option_label_height_position">Location of indicator</string>
+	<string name="option_label_variant_diagonals">Variant diagonal style</string>
 	<string name="option_label_font">Font Size</string>
-		
+	<string name="option_label_font_color">Font Color</string>		
 		
 	<!-- VALUES -->
 	<string name="option_val_yes">yes</string>
@@ -21,4 +22,11 @@
 	
 	<string name="option_val_medium">medium</string>
 	<string name="option_val_large">large</string>
+
+	<string name="option_val_dark">dark</string>
+	<string name="option_val_medium">medium</string>
+	<string name="option_val_light">light</string>
+	
+	<string name="option_val_short">short</string>
+	<string name="option_val_long">long</string>
 </root>

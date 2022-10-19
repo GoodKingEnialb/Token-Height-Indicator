@@ -1,37 +1,36 @@
 -- Variables
-local onWheel_orig = nil
 local getWidgetList_orig = nil
 local notchScale = 5
 local heightUnits = ' ft'
+local bFoundUnits = false
 local heightFont = ''
 local bPlayerControl = true
-OOB_MSGTYPE_TOKENHEIGHTCHANGE = "UpdateHeightIndicator"
 
+OOB_MSGTYPE_TOKENHEIGHTCHANGE = "UpdateHeightIndicator"
+	
 function onInit()
 
 	registerOptions()
 
 	-- height handler
-    DB.addHandler("combattracker.list.*.height", "onUpdate", dbWatcher)
+    --DB.addHandler("combattracker.list.*.height", "onUpdate", dbWatcher)
 		
 	-- squirrel away original functions
-	onWheel_orig = TokenManager.onWheelHelper
 	updateEffectsHelper_orig = TokenManager.updateEffectsHelper
 	getWidgetList_orig = TokenManager.getWidgetList
 	
 	-- override functions
 	Token.onWheel = onWheel
 	TokenManager.getWidgetList = getWidgetList
+	Token.getDistanceBetween = getDistanceBetween
+	Token.getTokensWithinDistance = getTokensWithinDistance
 
 	-- Register clients for height changes
     OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_TOKENHEIGHTCHANGE, updateTokenHeightIndicators)
 	
-	if (User.getRulesetName() == "4E") then
-		notchScale = 1
-		heightUnits = ' sq'
-	end
 end
 
+-- registerOptions fixed by bmos (removed duplicate entries between labels/values and baselabel/baseval)
 function registerOptions()
 	OptionsManager.registerOption2 (
         "THIALLOWUSERADJUST",
@@ -40,8 +39,8 @@ function registerOptions()
         "option_label_allow_player_mod",
         "option_entry_cycler",
         {
-            labels = "option_val_yes|option_val_no",
-            values = "yes|no",
+            labels = "option_val_no",
+            values = "no",
             baselabel = "option_val_yes",
             baseval = "yes",
             default = "yes"
@@ -54,10 +53,10 @@ function registerOptions()
         "option_label_height_position",
         "option_entry_cycler",
         {
-            labels = "option_val_top|option_val_top_right|option_val_right|option_val_bottom_right|option_val_bottom|option_val_bottom_left|option_val_left|option_val_top_left",
-            values = "top|top right|right|bottom right|bottom|bottom left|left|top left",
-            baselabel = "option_val_top",
-            baseval = "top",
+            labels = "option_val_bottom_right|option_val_right|option_val_top_right|option_val_top|option_val_top_left|option_val_left|option_val_bottom_left",
+            values = "bottom right|right|top right|top|top left|left|bottom left",
+            baselabel = "option_val_bottom",
+            baseval = "bottom",
             default = "bottom"
         }
     ) 
@@ -68,17 +67,46 @@ function registerOptions()
         "option_label_font",
         "option_entry_cycler",
         {
-            labels = "option_val_medium|option_val_large",
-            values = "medium|large",
+            labels = "option_val_large",
+            values = "large",
             baselabel = "option_val_medium",
             baseval = "medium",
             default = "medium"
+        }
+    ) 
+	OptionsManager.registerOption2 (
+        "THIFONTCOLOR",
+        false,
+        "option_header_height_indicator",
+        "option_label_font_color",
+        "option_entry_cycler",
+        {
+            labels = "option_val_medium|option_val_light",
+            values = "medium|light",
+            baselabel = "option_val_dark",
+            baseval = "dark",
+            default = "dark"
+        }
+    ) 
+	OptionsManager.registerOption2 (
+        "THIDIAGONALS",
+        false,
+        "option_header_height_indicator",
+        "option_label_variant_diagonals",
+        "option_entry_cycler",
+        {
+            labels = "option_val_long",
+            values = "long",
+            baselabel = "option_val_short",
+            baseval = "short",
+            default = "short"
         }
     ) 
 	
 	OptionsManager.registerCallback("THIALLOWUSERADJUST", setPlayerControl)
 	OptionsManager.registerCallback("THIPOSITION", changeOptions)
 	OptionsManager.registerCallback("THIFONT", changeOptions)
+	OptionsManager.registerCallback("THIFONTCOLOR", changeOptions)
 	setFont()
 end
 
@@ -92,6 +120,7 @@ end
 
 function setFont()
 	local sFontOption = OptionsManager.getOption("THIFONT")
+	local sFontColor = OptionsManager.getOption("THIFONTCOLOR")
 	if sFontOption == "medium" then
 		heightFont = "height_medium"
 	elseif sFontOption == "large" then
@@ -99,56 +128,42 @@ function setFont()
 	else
 		heightFont = ''
 	end
+	heightFont = heightFont .. "_" .. sFontColor
 end
 
+function getDistanceBetween(sourceItem, targetItem)
+   local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(sourceItem, true)
+   if ctrlImage then
+      return ctrlImage.getDistanceBetween(sourceItem, targetItem)
+   else
+      ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(targetItem, true)
+      if ctrlImage then
+         return ctrlImage.getDistanceBetween(sourceItem, targetItem)
+      else
+         return 0
+	  end
+   end		 
+end
+
+function getTokensWithinDistance(sourceItem, distance)
+   local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(sourceItem, true)
+   if ctrlImage then
+      return ctrlImage.getTokensWithinDistance(sourceItem, distance)
+   else
+      return {}
+   end		 
+end
+
+-- Simplified greatly by Kelrugem (with help from Moon Wizard) - don't completely override onWheel, as the original gets run in semi-parallel
 function onWheel(tokenCT, notches)
-	local stopProcessing = true
     if Input.isAltPressed() then  
-		TokenHeight.updateHeight(tokenCT, notches, true)
-	elseif Input.isShiftPressed() then
-		local oldOrientation = tokenCT.getOrientation()
-		local newOrientation = (oldOrientation+notches)%8
-		tokenCT.setOrientation(newOrientation)
-    elseif Input.isControlPressed() then
-		local w = 0
-		local h = 0
-		local rectScale = 0
-		w,h = tokenCT.getImageSize()
-		if w > h then
-			rectScale = w / h 
-		elseif h > w then
-			rectScale = h / w 
-		else
-			rectScale = 1
-		end
-		
-		local newscale = tokenCT.getScale()
-		if UtilityManager.isClientFGU() then
-			local adj = notches * 0.1
-			if adj < 0 then
-				newscale = newscale * (1 + adj)
-			else
-				newscale = newscale * (1 / (1 - adj))
-			end
-		else
-			newscale = newscale + (notches * 0.1)
-			if newscale < 0.1 then
-				newscale = 0.1
-			end
-		end
-		tokenCT.setScale(newscale * rectScale)
+        TokenHeight.updateHeight(tokenCT, notches, true);
+        return true;
     end
-		
-    return true
-end
-
-function dbWatcher(node)
-    local token = CombatManager.getTokenFromCT(DB.getParent(node))
 end
 
 -- Sets and displays the height of the token
 function updateHeight(token, notches, forceRangeArrowRedraw)
-
     if not token then
         return
     end
@@ -158,6 +173,7 @@ function updateHeight(token, notches, forceRangeArrowRedraw)
 	if not ctNode then
 		return
 	end
+	
     local dbNode = DB.getChild(ctNode, "heightvalue")
     local nHeight = 0
 	
@@ -182,6 +198,17 @@ function updateHeight(token, notches, forceRangeArrowRedraw)
 	end
 	
 	notifyHeightChange()
+end
+
+function setUnits(units, suffix)
+	notchScale = units
+	if suffix == '\'' then
+		heightUnits = ' ft'
+	elseif suffix == '' then
+		heightUnits = ' sq'
+	else
+		heightUnits = suffix
+	end
 end
 
 function getHeight(ctNode)
@@ -212,6 +239,13 @@ function displayHeight(heightWidget)
 		return
 	end
 	local nHeight = 0
+
+	-- optimization requires reset of onMeasurePointer checks
+	local ctrlImage = ImageManager.getImageControl(ctToken, false)
+	if ctrlImage then
+		ctrlImage.ResetOptData()
+	end
+	
 	
 	if heightWidget.getValue() ~= nil then
         nHeight = tonumber(heightWidget.getValue());   
@@ -225,8 +259,6 @@ function displayHeight(heightWidget)
 		end
 		widget.setName("heightindication"); 
 		widget.setFrame('mini_name', 5, 1, 5, 1)
-		--if OptionsManager.isOption("THIPOSITION", "Bottom")
-		--option_val_top|option_val_right|option_val_bottom|option_val_left
 		widget.setPosition(OptionsManager.getOption("THIPOSITION"), 0, 0)
 	end
 	
@@ -259,38 +291,32 @@ function changeOptions()
 	setFont()
 	for _, ctNode in pairs(CombatManager.getCombatantNodes()) do
 	    local ctToken = CombatManager.getTokenFromCT(ctNode)
-		if not (ctToken) then
-			return
-		end
-		local widget = ctToken.findWidget("heightindication")
-		if not (widget) then
-			return
-		end
-		
-		local dbNode = DB.getChild(ctNode, "heightvalue")
-		local nHeight = 0
-		
-		if dbNode ~= nil and dbNode.getValue() ~= nil then
-			nHeight = tonumber(dbNode.getValue());   
-		end
-		
-		--DB.deleteChild(ctNode, "heightvalue")
-		widget.destroy()
-
-		if nHeight ~= 0 then
-			widget = ctToken.addTextWidget( "mini_name", '' )
-			if heightFont ~= '' then
-				widget.setFont(heightFont)
+		if ctToken then
+			local widget = ctToken.findWidget("heightindication")
+			if widget then	
+				local dbNode = DB.getChild(ctNode, "heightvalue")
+				local nHeight = 0
+			
+				if dbNode ~= nil and dbNode.getValue() ~= nil then
+					nHeight = tonumber(dbNode.getValue());   
+				end
+			
+				widget.destroy()
+				if nHeight ~= 0 then
+					widget = ctToken.addTextWidget( "mini_name", '' )
+					if heightFont ~= '' then
+						widget.setFont(heightFont)
+					end
+					widget.setName("heightindication"); 
+					widget.setFrame('mini_name', 5, 1, 5, 1)
+					widget.setPosition(OptionsManager.getOption("THIPOSITION"), 0, 0)
+			
+					-- update height display        
+					widget.setText(nHeight .. heightUnits)
+					widget.bringToFront();       
+					widget.setVisible(true)
+				end	
 			end
-			widget.setName("heightindication"); 
-			widget.setFrame('mini_name', 5, 1, 5, 1)
-			widget.setPosition(OptionsManager.getOption("THIPOSITION"), 0, 0)
-		
-			-- update height display        
-			widget.setText(nHeight .. heightUnits)
-			widget.bringToFront();       
-			widget.setVisible(true)
-		end		
-
+		end
     end
 end
