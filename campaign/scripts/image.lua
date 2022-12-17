@@ -8,6 +8,87 @@ local lastDiag = 0
 local OptData = {}
 local tolerance = 0.005
 
+function onInit()
+	if super and super.onInit then
+		super.onInit();
+	end
+
+	_, units, suffix, _ = getImageSettings();
+
+	TokenHeight.refreshHeights();
+	local tTokens = self.getTokens();
+	for _, token in pairs(tTokens) do
+		local nodeCT = CombatManager.getCTFromToken(token);
+		DB.addHandler(DB.getPath(nodeCT, "heightvalue"), "onUpdate", updatePointer);
+	end
+end
+
+function onClose()
+	local tTokens = self.getTokens();
+	for _, token in pairs(tTokens) do
+		local nodeCT = CombatManager.getCTFromToken(token);
+		DB.removeHandler(DB.getPath(nodeCT, "heightvalue"), "onUpdate", updatePointer);
+	end
+	if super and super.onClose then
+		super.onClose();
+	end
+end
+
+function onTokenAdded(prototypename, x, y)
+	local token;
+	if super and super.onTokenAdded then
+		token = super.onTokenAdded(prototypename, x, y);
+	end
+	if token then
+		local nodeCT = CombatManager.getCTFromToken(token);
+		DB.addHandler(DB.getPath(nodeCT, "heightvalue"), "onUpdate", updatePointer);
+	end
+	return token;
+end
+
+function clearSelectedTokens()
+	local tTokens = self.getSelectedTokens();
+	for _, token in pairs(tTokens) do
+		local nodeCT = CombatManager.getCTFromToken(token);
+		DB.removeHandler(DB.getPath(nodeCT, "heightvalue"), "onUpdate", updatePointer);
+	end
+	if super and super.clearSelectedTokens then
+		super.clearSelectedTokens();
+	end
+end
+
+-- Updates and gets the distance that is the label for the pointers that have changed because height changed however.....
+-- When we get the value I have no idea how to set the label. Is this internal to the engine and we can never get to it?
+-- That seems weird if so but perhaps. Anyhow all the pieces are here if you can get a handle to the pointer itself.
+function updatePointer(nodeHeightValue)
+	local nGridSize, nUnits, suffix, diagmult = getImageSettings();
+	if nGridSize ~= 0 then
+		local nodeCT = nodeHeightValue.getParent();
+		local tokenCT = CombatManager.getTokenFromCT(nodeCT);
+		local rActor = ActorManager.resolveActor(nodeCT);
+		local nTokenCTX, nTokenCTY = tokenCT.getPosition();
+		local tTargets = TargetingManager.getFullTargets(rActor);
+
+		for _, rTarget in pairs(tTargets) do
+			local nodeTargetCT = ActorManager.getCTNode(rTarget);
+			local tokenTargetCT = CombatManager.getTokenFromCT(nodeTargetCT);
+			local nTokenTargetCTX, nTokenTargetCTY = tokenTargetCT.getPosition();
+			local nDistance = super.getDistanceBetween(tokenCT, tokenTargetCT);
+
+			Debug.chat("Distance: " .. onMeasurePointer(nDistance*nGridSize/nUnits, "arrow", nTokenCTX, nTokenCTY, nTokenTargetCTX, nTokenTargetCTY));
+		end
+
+		local tTokens= self.getTokens();
+		for _, token in pairs(tTokens) do
+			if tokenCT.isTargetedBy(token) then
+				local nTokenX, nTokenY = token.getPosition();
+				local nDistance = super.getDistanceBetween(tokenCT, token);
+				Debug.chat("Distance: " .. onMeasurePointer(nDistance*nGridSize/nUnits, "arrow", nTokenCTX, nTokenCTY, nTokenX, nTokenY));
+			end
+		end
+	end
+end
+
 function getImageSettings()
 	local gridsize = lastGridSize
 	if getGridSize then
@@ -549,16 +630,6 @@ function getClosestPositionToReference(token, referenceX, referenceY, referenceZ
 	return closestX, closestY, closestZ
 end
 
-function onInit()
-	if super and super.onInit then
-		super.onInit()
-	end
-
-	_, units, suffix, _ = getImageSettings()
-	
-	TokenHeight.refreshHeights()
-end	
-
 -- Distance between two locations in 3 dimensions.  
 function distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
 --Debug.console("distanceBetween " .. startX .. "," .. startY .. "," .. startZ .. " and " ..  endX .. "," .. endY .. "," .. endZ .. ": " .. (bSquare and 'true' or 'false'))
@@ -628,6 +699,7 @@ end
 
 function onMeasurePointer(pixellength,pointertype,startX,startY,endX,endY)
 --Debug.console("OMP")
+Debug.chat("rhagelstrom: ", pixellength, pointertype, startX, startY, endX, endY);
 	-- Modified by SilentRuin to better integrate with the superclasses and optimize
 	local retStr = nil -- we will not do anything with label but if someone ever does we can handle the that code first
 	if super and super.onMeasurePointer then
