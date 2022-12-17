@@ -60,13 +60,14 @@
 		5.2  - Reverted back to getting space from the DB instead of ActorCommonManager.getSpaceReach (doesn't work as expected when adjusting space)
 		5.3  - Fixed an incompatibility with the Assistant GM extension
 		5.4  - Only call THI code for add/delete on the server and optimized the token refresh, with help from SilentRuin
+		5.5  - Recreated base FGU logic for distances, which should make everything consistent (internally and with FGU functions)
 -->
-<root version="5" release="4">
-	<announcement text="Token Height Indication v5.4 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, SilentRuin, and Arnagus" font="emotefont" icon="GKElogo" />
+<root version="5" release="5">
+	<announcement text="Token Height Indication v5.5 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, SilentRuin, and Arnagus" font="emotefont" icon="GKElogo" />
 	
 	<properties>
 		<name>Feature: Token Height Indication</name>
-		<version>5.4</version>
+		<version>5.5</version>
 		
 		<author>Good King Enialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, and bratch9</author>
 		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>
