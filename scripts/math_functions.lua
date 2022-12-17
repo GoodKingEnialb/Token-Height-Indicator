@@ -93,3 +93,15 @@ function clamp(x, minVal, maxVal)
 	end
 	return result
 end
+
+function clampAndAdjust(x, minVal, maxVal, adjustVal)
+	local result = 0
+	if x < minVal then
+		result = minVal + adjustVal
+	elseif x > maxVal then
+		result = maxVal - adjustVal
+	else 
+		result = x
+	end
+	return result
+end

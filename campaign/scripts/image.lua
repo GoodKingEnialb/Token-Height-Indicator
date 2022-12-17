@@ -9,14 +9,6 @@ local OptData = {}
 local tolerance = 0.005
 local bFirstSpaceMissingWarningGiven = true
 
-function ResetOptData(hashtag)
-	if hashtag then
-		OptData[hashtag] = {}
-	else
-		OptData = {}
-	end
-end
-
 function getImageSettings()
 	local gridsize = lastGridSize
 	if getGridSize then
@@ -57,10 +49,6 @@ function getCoordinatesOfItem(sourceItem)
 	local startY = 0
 	local startZ = 0
 
-	local endX = 0
-	local endY = 0
-	local endZ = 0
-
 	local ctNodeOrigin
 	local sourceToken
 	
@@ -71,18 +59,34 @@ function getCoordinatesOfItem(sourceItem)
 	end
 	
 	if sourceToken.getContainerNode then
+		startX, startY = sourceToken.getPosition()
 		ctNodeOrigin = CombatManager.getCTFromToken(sourceToken)
 		if ctNodeOrigin then
 			startZ = TokenHeight.getHeight(ctNodeOrigin) * gridsize / units
 		end
-	end
-
-	if sourceToken.getContainerNode then
-		startX, startY = sourceToken.getPosition()
 	else
-		startX, startY = sourceToken['x'], sourceToken['y']
+		startX, startY = sourceToken['x'], sourceToken['y']  
 	end
 	return startX, startY, startZ, sourceToken
+end
+
+-- Get coordinates of two items (needed in case they're of different types because of needing to invert Y)
+function getCoordinatesOfItems(sourceItem, targetItem)
+	if not sourceItem or not CombatManager then
+		return nil, nil, nil, nil, nil, nil, nil, nil
+	end
+	
+	local gridsize, units, _, _ = getImageSettings()
+
+	local startX, startY, startZ, sourceToken = getCoordinatesOfItem(sourceItem)
+	local endX, endY, endZ, targetToken = getCoordinatesOfItem(targetItem)
+	
+	if not sourceToken.getContainerNode and targetToken.getContainerNode then
+		startY = startY * -1 
+	elseif sourceToken.getContainerNode and not targetToken.getContainerNode then
+		endY = endY * -1 		
+	end
+	return startX, startY, startZ, sourceToken, endX, endY, endZ, targetToken
 end
 
 function getDistanceBetween(sourceItem, targetItem)
@@ -91,14 +95,21 @@ function getDistanceBetween(sourceItem, targetItem)
 	end
 
 	-- Just use the coorindates of the two items unless they're both in containers, in which case we want the x/y/z coordinates
-	-- of the containers closest to each other
+	-- of the containers closest to each other (but if one is a container and the other is not, have to flip the y coordinate of the non-container)
 	local startX, startY, startZ, sourceToken = getCoordinatesOfItem(sourceItem)
 	local endX, endY, endZ, targetToken = getCoordinatesOfItem(targetItem)
+--	local startX, startY, startZ, sourceToken, endX, endY, endZ, targetToken = getCoordinatesOfItems(sourceItem, targetItem)
 
 	if sourceToken.getContainerNode and targetToken.getContainerNode then
+		startX, startY, startZ = getClosestPosition(sourceToken, targetToken)
 		endX, endY, endZ = getClosestPosition(targetToken, sourceToken)
 	end
 
+local distBet = distanceBetween(startX, startY, startZ, endX, endY, endZ, false)
+--Debug.console("tokens: " .. startX .. "," .. startY .. "," .. startZ .. " / " .. endX .. "," .. endY .. "," .. endZ)
+--Debug.console("GDB_new = " .. distBet)
+--distBet = distanceBetween(startX, -startY, startZ, endX, endY, endZ, false)
+--Debug.console("distanceb = " .. distBet)
 	return distanceBetween(startX, startY, startZ, endX, endY, endZ, false)
 end
 
@@ -471,6 +482,7 @@ function getTokenBounds(token)
 
 --	local nSpace = ActorCommonManager.getSpaceReach(ctToken)
 	local nSpace = DB.getValue(ctToken, "space")
+--Debug.console("Midpoint = " .. centerPosX .. "," .. centerPosY .. "," .. bottomPosZ .. " / " .. nSpace)
 --Debug.console(token.getName() .. ": " .. nSpace)
 	if nil == nSpace then
 		nSpace = 5
@@ -488,21 +500,44 @@ function getTokenBounds(token)
 	maxPosY = centerPosY+nHalfSpace
 	maxPosZ = bottomPosZ+nHalfSpace*2
 
+--Debug.console("Bounds = " .. minPosX .. "," .. maxPosX .. "," .. minPosY.. "," .. maxPosY.. "," .. minPosZ.. "," .. maxPosZ)
 	return minPosX, maxPosX, minPosY, maxPosY, minPosZ, maxPosZ
 end
 
 -- Get the closest position of token 1 (center of the cube contained by token 1 which is closest
--- along a straight line to the given reference coordinates
-function getClosestPositionToReference(token, referencex, referencey, referencez)
-	local closestx, closesty, closestz, minPosX, maxPosX, minPosY, maxPosY, minPosZ, maxPosZ
+-- along a straight line to the given reference coordinates.  It's not really the closest position, but the center
+-- of the square in a grid that is closest, with the grid defined by the size of the token and centered on the token.
+function getClosestPositionToReference(token, referenceX, referenceY, referenceZ)
+	local midX, midY, midZ
+	local closestX, closestY, closestZ, minPosX, maxPosX, minPosY, maxPosY, minPosZ, maxPosZ
+	local gridsize, units, _, _ = getImageSettings()
 
-	minPosX, maxPosX, minPosY, maxPosY, minPosZ, maxPosZ = getTokenBounds(token)
+	if token.getContainerNode then
+		midX, midY = token.getPosition()
+		ctNode = CombatManager.getCTFromToken(token)
+		if ctNode then
+			midZ = TokenHeight.getHeight(ctNode) * gridsize / units
 
-	closestx=MathFunctions.clamp(referencex,minPosX,maxPosX)
-	closesty=MathFunctions.clamp(referencey,minPosY,maxPosY)
-	closestz=MathFunctions.clamp(referencez,minPosZ,maxPosZ)
+			local nSpace = DB.getValue(ctNode, "space")
+			local nGridSize = math.floor(nSpace / units)
+			local nHalfSquare = gridsize / 2
+			
+			-- Form the grid
+			minPosX, maxPosX, minPosY, maxPosY, minPosZ, maxPosZ = getTokenBounds(token)
+
+			-- Get the real closest point and slide to the middle of the square
+			closestX=MathFunctions.clampAndAdjust(referenceX,minPosX,maxPosX,nHalfSquare)
+			closestY=MathFunctions.clampAndAdjust(referenceY,minPosY,maxPosY,nHalfSquare)
+			closestZ=MathFunctions.clampAndAdjust(referenceZ,minPosZ,maxPosZ,nHalfSquare)
+		end
+	else
+		closestX, closestY = sourceToken['x'], sourceToken['y']  
+		closestZ = 0
+	end
+
+
 		
-	return closestx, closesty, closestz
+	return closestX, closestY, closestZ
 end
 
 function onInit()
@@ -513,12 +548,11 @@ function onInit()
 	_, units, suffix, _ = getImageSettings()
 	
 	TokenHeight.refreshHeights()
-	ResetOptData()
 end	
 
 -- Distance between two locations in 3 dimensions.  
 function distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
---Debug.console("distanceBetween " .. startX .. "," .. startY .. "," .. startZ .. " and " ..  endX .. "," .. endY .. "," .. endZ)
+--Debug.console("distanceBetween " .. startX .. "," .. startY .. "," .. startZ .. " and " ..  endX .. "," .. endY .. "," .. endZ .. ": " .. (bSquare and 'true' or 'false'))
 	local gridsize, units, suffix, diagmult = getImageSettings()
 
 	local totalDistance = 0
@@ -584,6 +618,7 @@ function distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
 end
 
 function onMeasurePointer(pixellength,pointertype,startX,startY,endX,endY)
+--Debug.console("OMP")
 	-- Modified by SilentRuin to better integrate with the superclasses and optimize
 	local retStr = nil -- we will not do anything with label but if someone ever does we can handle the that code first
 	if super and super.onMeasurePointer then
@@ -591,29 +626,22 @@ function onMeasurePointer(pixellength,pointertype,startX,startY,endX,endY)
 	end
 
 	local gridsize, units, suffix, diagmult = getImageSettings()
-	local hashtag = tostring(startX) .. tostring(startY) .. tostring(endX) .. tostring(endY) .. tostring(diagmult)
-	if OptData and OptData[hashtag] and 
-		OptData[hashtag].pixellength == pixellength and 
-		OptData[hashtag].pointertype == pointertype and OptData[hashtag].retStr then 
-			return OptData[hashtag].retStr
-	end
-	ResetOptData(hashtag)
+	local heightOrigin = 0
+	local heightTarget = 0
 
-	local ctNodeOrigin, ctNodeTarget = getCTNodeAt(startX,startY, endX, endY)
-
+	local ctNodeOrigin, ctNodeTarget = getCTNodeAt(startX, startY, endX, endY)
 	if ctNodeOrigin and ctNodeTarget then
-		local heightOrigin = TokenHeight.getHeight(ctNodeOrigin)
-		local heightTarget = TokenHeight.getHeight(ctNodeTarget)
+		heightOrigin = TokenHeight.getHeight(ctNodeOrigin)
+		heightTarget = TokenHeight.getHeight(ctNodeTarget)
 		local originSpace = 0
 		local targetSpace = 0
-		if TokenManager.getTokenSpace then
+--		if TokenManager.getTokenSpace then
 			originSpace = DB.getValue(ctNodeOrigin, "space")
 			targetSpace = DB.getValue(ctNodeTarget, "space")
-		end
+--		end
 --Debug.console("Space = " .. originSpace .. "," .. targetSpace)
 		
 		if not (gridsize and units and suffix and diagmult) then 
-			OptData[hashtag] = {pixellength = pixellength, pointertype = pointertype, endX = endX, endY = endY, retStr = nil}
 			return retStr
 		end
 		local bSquare = false
@@ -627,6 +655,15 @@ function onMeasurePointer(pixellength,pointertype,startX,startY,endX,endY)
 		endZ = heightTarget * gridsize / units
 
 		local distance = distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
+--local tokenSource = CombatManager.getTokenFromCT(ctNodeOrigin)
+--local tokenTarget = CombatManager.getTokenFromCT(ctNodeTarget)
+--Debug.console("distance(img) = " .. distance)
+--local gdb = TokenHeight.getDistanceBetween(tokenSource, tokenTarget)
+--Debug.console("distance(tkn) = " .. gdb)
+--if super and super.onMeasurePointer then
+--Debug.console("OMP orig = " .. super.onMeasurePointer(pixellength, pointertype, startX, startY, endX, endY))
+--end
+
 		if distance == 0 then
 			retStr = ""
 		else
@@ -640,7 +677,6 @@ function onMeasurePointer(pixellength,pointertype,startX,startY,endX,endY)
 		end
 --		Debug.console("OMP: " .. ctNodeTarget.getName() .. " is " .. distance .. ": " .. startX .. "," .. startY .. "," .. startZ .. ": " .. endX .. "," .. endY .. "," .. endZ .. ": " .. retStr) 
 	end
-	OptData[hashtag] = {pixellength = pixellength, pointertype = pointertype, endX = endX, endY = endY, retStr = retStr}
 	return retStr
 end
 
@@ -803,7 +839,6 @@ function onDrop(x, y, draginfo)
 		custData.imgCtrl = self
 		draginfo.setCustomData(custData)
 	end
-	ResetOptData()
 
 	if super and super.onDrop then
 		return super.onDrop(x, y, draginfo)

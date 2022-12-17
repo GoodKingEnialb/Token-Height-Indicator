@@ -4,6 +4,12 @@ local heightUnits = ' ft'
 local bFoundUnits = false
 local heightFont = ''
 local bPlayerControl = true
+local updateEffectsHelper_orig = nil
+local onTokenAdd_orig = nil
+local onTokenDelete_orig = nil
+local getCTFromToken_orig = nil
+local updateSizeHelper_orig = nil
+local getDistanceBetween_orig = nil
 
 OOB_MSGTYPE_TOKENHEIGHTCHANGE = "UpdateHeightIndicator"
 OOB_MSGTYPE_REQUESTOWNERSHIP = "RequestTokenOwnership"
@@ -19,6 +25,7 @@ function onInit()
 	onTokenDelete_orig = TokenManager.onTokenDelete
 	getCTFromToken_orig = CombatManager.getCTFromToken
 	updateSizeHelper_orig = TokenManager.updateSizeHelper
+	getDistanceBetween_orig = Token.getDistanceBetween
 
 	-- override functions
 	Token.onWheel = onWheel
@@ -138,6 +145,7 @@ function setFont()
 end
 
 function getDistanceBetween(sourceItem, targetItem)
+--Debug.console("GDB_orig = " .. getDistanceBetween_orig(sourceItem, targetItem))
    local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(sourceItem, true)
    if ctrlImage then
       return ctrlImage.getDistanceBetween(sourceItem, targetItem)
@@ -204,9 +212,9 @@ function updateHeight(token, notches)
 		DB.setValue(ctNode, "heightvalue", "number", nHeight)
 		-- Jiggle the token to force a redraw of the range arrow
 		if (notches ~= 0) then
-			local x, y = token.getPosition()
-			token.setPosition(x+1,y+1)
-			token.setPosition(x,y)	
+--			local x, y = token.getPosition()
+--			token.setPosition(x+1,y+1)
+--			token.setPosition(x,y)
 		end
 	else
 		requestOwnership(token, nHeight)
@@ -217,7 +225,6 @@ function updateHeight(token, notches)
 	end
 	
 	notifyHeightChange(ctNode)
-	--notifyHeightChange("all")
 end
 
 function setHeight(token, nHeight)
@@ -285,7 +292,6 @@ function updateTokenHeightIndicators(msgOOB)
 			if (msgOOB.node == "all") then
 				displayHeight(DB.getChild(ctNode, "heightvalue"))
 			elseif (msgOOB.node == tostring(ctNode)) then
-				-- TODO Figure out how to pass the reference to the node so it only updates once
 				displayHeight(DB.getChild(ctNode, "heightvalue"))
 				break
 			end
@@ -334,15 +340,6 @@ function displayHeight(heightWidget)
 		return
 	end
 	local nHeight = 0
-
-	-- SilentRuin optimization
-	-- optimization requires reset of onMeasurePointer checks
-	local ctrlImage = ImageManager.getImageControl(ctToken, false)
-	if ctrlImage and ctrlImage.ResetOptData then
-		ctrlImage.ResetOptData()
-		updateUnits(ctrlImage)
-	end
-	
 	
 	if heightWidget.getValue() ~= nil then
         nHeight = tonumber(heightWidget.getValue());   
@@ -433,7 +430,4 @@ end
 function updateSizeHelper(ctToken, ctNode)
 	updateSizeHelper_orig(ctToken, ctNode)
 	local ctrlImage = ImageManager.getImageControl(ctToken, false)
-	if ctrlImage then
-		ctrlImage.ResetOptData()
-	end
 end
