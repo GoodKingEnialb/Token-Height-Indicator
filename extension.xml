@@ -61,15 +61,16 @@
 		5.3  - Fixed an incompatibility with the Assistant GM extension
 		5.4  - Only call THI code for add/delete on the server and optimized the token refresh, with help from SilentRuin
 		5.5  - Recreated base FGU logic for distances, which should make everything consistent (internally and with FGU functions)
+		5.6  - Automatically update targeting arrow on height change, with help from rhagelstrom
 -->
-<root version="5" release="5">
-	<announcement text="Token Height Indication v5.6 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, SilentRuin, and Arnagus" font="emotefont" icon="GKElogo" />
+<root version="5" release="6">
+	<announcement text="Token Height Indication v5.6 by GKEnialb with help from bmos, rhagelstrom, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, SilentRuin, and Arnagus" font="emotefont" icon="GKElogo" />
 	
 	<properties>
 		<name>Feature: Token Height Indication</name>
 		<version>5.6</version>
 		
-		<author>Good King Enialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, and bratch9</author>
+		<author>Good King Enialb with help from bmos, rhagelstrom, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, and bratch9</author>
 		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>
 	
 	</properties>    	
