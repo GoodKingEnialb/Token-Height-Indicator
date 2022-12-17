@@ -63,11 +63,11 @@
 		5.5  - Recreated base FGU logic for distances, which should make everything consistent (internally and with FGU functions)
 -->
 <root version="5" release="5">
-	<announcement text="Token Height Indication v5.5 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, SilentRuin, and Arnagus" font="emotefont" icon="GKElogo" />
+	<announcement text="Token Height Indication v5.6 by GKEnialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, SilentRuin, and Arnagus" font="emotefont" icon="GKElogo" />
 	
 	<properties>
 		<name>Feature: Token Height Indication</name>
-		<version>5.5</version>
+		<version>5.6</version>
 		
 		<author>Good King Enialb with help from bmos, kelrugem, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, and bratch9</author>
 		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>
