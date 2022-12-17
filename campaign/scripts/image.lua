@@ -7,7 +7,6 @@ local lastSuffix = "ft"
 local lastDiag = 0
 local OptData = {}
 local tolerance = 0.005
-local bFirstSpaceMissingWarningGiven = true
 
 function getImageSettings()
 	local gridsize = lastGridSize
@@ -485,10 +484,7 @@ function getTokenBounds(token)
 --Debug.console("Midpoint = " .. centerPosX .. "," .. centerPosY .. "," .. bottomPosZ .. " / " .. nSpace)
 --Debug.console(token.getName() .. ": " .. nSpace)
 	if nil == nSpace then
-		nSpace = 5
-		if bFirstSpaceMissingWarningGiven then
-			bFirstSpaceMissingWarningGiven = false
-		end
+		nSpace = units
 	end
 
 	local nHalfSpace = nSpace/2 * gridsize / units
@@ -519,6 +515,10 @@ function getClosestPositionToReference(token, referenceX, referenceY, referenceZ
 			midZ = TokenHeight.getHeight(ctNode) * gridsize / units
 
 			local nSpace = DB.getValue(ctNode, "space")
+			if nSpace == nil then
+				nSpace = units
+			end
+
 			local nGridSize = math.floor(nSpace / units)
 			local nHalfSquare = gridsize / 2
 			
@@ -531,7 +531,7 @@ function getClosestPositionToReference(token, referenceX, referenceY, referenceZ
 			closestZ=MathFunctions.clampAndAdjust(referenceZ,minPosZ,maxPosZ,nHalfSquare)
 		end
 	else
-		closestX, closestY = sourceToken['x'], sourceToken['y']  
+		closestX, closestY = token['x'], token['y']  
 		closestZ = 0
 	end
 
