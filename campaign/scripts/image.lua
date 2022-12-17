@@ -517,6 +517,15 @@ function getClosestPositionToReference(token, referenceX, referenceY, referenceZ
 			local nSpace = DB.getValue(ctNode, "space")
 			if nSpace == nil then
 				nSpace = units
+				local tokenName = "Unknown Token Name"
+				local ctNodeName = "Unknown CT Node Name"
+				if token.getName then
+					tokenName = token.getName()
+				end
+				if ctNode.getName then
+					ctNodeName = ctNode.getName()
+				end
+				Debug.console("Missing module for " .. tokenName .. "/" .. ctNodeName .. ". Remove from map and re-add.")
 			end
 
 			local nGridSize = math.floor(nSpace / units)
