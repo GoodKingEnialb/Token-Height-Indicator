@@ -146,11 +146,11 @@ end
 
 function getDistanceBetween(sourceItem, targetItem)
 --Debug.console("GDB_orig = " .. getDistanceBetween_orig(sourceItem, targetItem))
-   local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(sourceItem, true)
+   local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(sourceItem, false)
    if ctrlImage then
       return ctrlImage.getDistanceBetween(sourceItem, targetItem)
    else
-      ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(targetItem, true)
+      ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(targetItem, false)
       if ctrlImage then
          return ctrlImage.getDistanceBetween(sourceItem, targetItem)
       else
@@ -160,7 +160,7 @@ function getDistanceBetween(sourceItem, targetItem)
 end
 
 function getTokensWithinDistance(sourceItem, distance)
-   local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(sourceItem, true)
+   local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(sourceItem, false)
    if ctrlImage then
       return ctrlImage.getTokensWithinDistance(sourceItem, distance)
    else
@@ -170,7 +170,7 @@ end
 
 -- See image.getTokensWithinShapeFromToken for parameter details
 function getTokensWithinShape(originToken, shape, distance, height, width, azimuthalAngle, polarAngle)
-	local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(originToken, true)
+	local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(originToken, false)
 	if ctrlImage then
 	   return ctrlImage.getTokensWithinShapeFromToken(originToken, shape, distance, height, width, azimuthalAngle, polarAngle)
 	else
