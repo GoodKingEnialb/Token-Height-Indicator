@@ -215,6 +215,7 @@ function updateHeight(token, notches)
 --			local x, y = token.getPosition()
 --			token.setPosition(x+1,y+1)
 --			token.setPosition(x,y)
+			Token.onMove(token)
 		end
 	else
 		requestOwnership(token, nHeight)
