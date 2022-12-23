@@ -186,6 +186,29 @@ function onWheel(tokenCT, notches)
     end
 end
 
+-- Moves a token one off of center or back to center.
+function jiggle(token)
+	if token then
+		local x, y = token.getPosition()
+
+		-- To avoid cascading, use the current x position to against the half of the grid size to see
+		-- if we've previously skewed a little in one way and move it back the other
+		local ctrlImage, _, _ = ImageManager.getImageControl(token, false)
+		if ctrlImage then
+			local gridsize, _, _, _ = ctrlImage.getImageSettings()
+			local xNorm = x % (gridsize / 2)
+			local jiggleAmount = 1
+			if xNorm == 0 then
+				jiggleAmount = 1
+			elseif xNorm == 1 then
+				jiggleAmount = -1
+			end
+			token.setPosition(x+jiggleAmount,y)
+		end	
+	end
+end
+
+
 -- Sets and displays the height of the token
 function updateHeight(token, notches)
     if not token then
@@ -212,10 +235,13 @@ function updateHeight(token, notches)
 		DB.setValue(ctNode, "heightvalue", "number", nHeight)
 		-- Jiggle the token to force a redraw of the range arrow
 		if (notches ~= 0) then
---			local x, y = token.getPosition()
---			token.setPosition(x+1,y+1)
---			token.setPosition(x,y)
-			Token.onMove(token)
+			-- Move a single pixel to force the arrow redraw.  
+			jiggle(token, true)
+
+			-- If the aura effect extension is loaded, force it to re-evaluate the token, with thanks to SilentRuin
+			if AuraEffect and AuraEffect.notifyTokenMove then
+				AuraEffect.notifyTokenMove(token); 
+		 	end
 		end
 	else
 		requestOwnership(token, nHeight)

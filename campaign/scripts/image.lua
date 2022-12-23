@@ -185,11 +185,7 @@ function getDistanceBetween(sourceItem, targetItem)
 		endX, endY, endZ = getClosestPosition(targetToken, sourceToken)
 	end
 
-local distBet = distanceBetween(startX, startY, startZ, endX, endY, endZ, false)
---Debug.console("tokens: " .. startX .. "," .. startY .. "," .. startZ .. " / " .. endX .. "," .. endY .. "," .. endZ)
---Debug.console("GDB_new = " .. distBet)
---distBet = distanceBetween(startX, -startY, startZ, endX, endY, endZ, false)
---Debug.console("distanceb = " .. distBet)
+--Debug.console("distanceBetween " .. sourceToken.getName() .. " and " .. targetToken.getName())
 	return distanceBetween(startX, startY, startZ, endX, endY, endZ, false)
 end
 
@@ -635,6 +631,10 @@ function distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
 --Debug.console("distanceBetween " .. startX .. "," .. startY .. "," .. startZ .. " and " ..  endX .. "," .. endY .. "," .. endZ .. ": " .. (bSquare and 'true' or 'false'))
 	local gridsize, units, suffix, diagmult = getImageSettings()
 
+	-- snap x coordinate to the nearest half square to account for the jiggle introduced to work around the measurement arrow not updating
+	startX = startX - startX % (gridsize / 2)
+	endX = endX - endX % (gridsize / 2)
+
 	local totalDistance = 0
 	local dx = math.abs(endX-startX)
 	local dy = math.abs(endY-startY)
@@ -698,8 +698,6 @@ function distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
 end
 
 function onMeasurePointer(pixellength,pointertype,startX,startY,endX,endY)
---Debug.console("OMP")
---Debug.chat("rhagelstrom: ", pixellength, pointertype, startX, startY, endX, endY);
 	-- Modified by SilentRuin to better integrate with the superclasses and optimize
 	local retStr = nil -- we will not do anything with label but if someone ever does we can handle the that code first
 	if super and super.onMeasurePointer then
@@ -716,14 +714,11 @@ function onMeasurePointer(pixellength,pointertype,startX,startY,endX,endY)
 		heightTarget = TokenHeight.getHeight(ctNodeTarget)
 		local originSpace = 0
 		local targetSpace = 0
---		if TokenManager.getTokenSpace then
-			originSpace = DB.getValue(ctNodeOrigin, "space")
-			targetSpace = DB.getValue(ctNodeTarget, "space")
---		end
+		originSpace = DB.getValue(ctNodeOrigin, "space")
+		targetSpace = DB.getValue(ctNodeTarget, "space")
 --Debug.console("Space = " .. originSpace .. "," .. targetSpace)
 		
 		if not (gridsize and units and suffix and diagmult) then 
---Debug.chat("OMP1: Returning " .. retStr)
 			return retStr
 		end
 		local bSquare = false
@@ -736,15 +731,8 @@ function onMeasurePointer(pixellength,pointertype,startX,startY,endX,endY)
 		startZ = heightOrigin * gridsize / units
 		endZ = heightTarget * gridsize / units
 
+--Debug.console("OMP: distanceBetween " .. DB.getValue(ctNodeOrigin, "name", "") .. " and " .. DB.getValue(ctNodeTarget, "name", "") )
 		local distance = distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
---local tokenSource = CombatManager.getTokenFromCT(ctNodeOrigin)
---local tokenTarget = CombatManager.getTokenFromCT(ctNodeTarget)
---Debug.console("distance(img) = " .. distance)
---local gdb = TokenHeight.getDistanceBetween(tokenSource, tokenTarget)
---Debug.console("distance(tkn) = " .. gdb)
---if super and super.onMeasurePointer then
---Debug.console("OMP orig = " .. super.onMeasurePointer(pixellength, pointertype, startX, startY, endX, endY))
---end
 
 		if distance == 0 then
 			retStr = ""
@@ -757,90 +745,65 @@ function onMeasurePointer(pixellength,pointertype,startX,startY,endX,endY)
 			end
 			retStr = stringDistance .. suffix
 		end
+
 --		Debug.console("OMP: " .. ctNodeTarget.getName() .. " is " .. distance .. ": " .. startX .. "," .. startY .. "," .. startZ .. ": " .. endX .. "," .. endY .. "," .. endZ .. ": " .. retStr) 
 	end
 	return retStr
 end
 
-function getCTNodeAt_orig(startX, startY, endX, endY)
-	-- Rewrite by SilentRuin to look for both start and end at the same time
-	-- and break when both are found 
-	local allTokens = getTokens()
-	local gridsize, units, _, _ = getImageSettings()
-	local startCTnode = nil
-	local endCTnode = nil
-	local bFoundStart = false
-	local bFoundEnd = false
-	for _, oneToken in pairs(allTokens) do
-		local x,y = oneToken.getPosition()
-		local ctNode = CombatManager.getCTFromToken(oneToken)
-		local z = TokenHeight.getHeight(ctNode)
-		local bExact = true
-		local sizeMultiplier = 0
-
-		-- bmos / SoxMax 
-		local nSpaceNew = TokenManager.getTokenSpace(ctNode)
-		local nSpace = DB.getValue(ctNode, "space")
-		local nSpaceReach = ActorCommonManager.getSpaceReach(ctNode)
-
-		if nil == nSpace then
-			nSpace = 1
-		end
-
-		if nSpace then
-			sizeMultiplier = math.max(0,((nSpace / units) - 1)  * 0.5)
-			if nSpace > units * 3 then
-				bExact = false
-			end
-			
-			if not bFoundStart then
-				if bExact then
-					bFoundStart = exactMatch(startX, startY, x, y, sizeMultiplier, gridsize)
-				else
-					bFoundStart = matchWithinSize(startX, startY, x, y, sizeMultiplier, gridsize)
-				end
-				if bFoundStart then
-					startCTnode = ctNode
-				end
-			end
-
-			if not bFoundEnd then
-				if bExact then
-					bFoundEnd = exactMatch(endX, endY, x, y, sizeMultiplier, gridsize)
-				else
-					bFoundEnd = matchWithinSize(endX, endY, x, y, sizeMultiplier, gridsize)
-				end
-				if bFoundEnd then
-					endCTnode = ctNode
-				end
-			end
-
-			if bFoundStart and bFoundEnd then
-				break
-			end
-		end
-    end
-	return startCTnode, endCTnode
-end
-
 function getCTNodeAt(startX, startY, endX, endY)
-	local _, units, _, _ = getImageSettings()
+	local gridsize, units, _, _ = getImageSettings()
 	local startCTnode = nil
 	local endCTnode = nil
 	local startToken = nil
 	local endToken = nil
 
 	local startTokens = getTokensWithinSquare(startX, startY, units/4)
-	if startTokens and startTokens[1] then
-		startToken = startTokens[1]
-		startCTnode = CombatManager.getCTFromToken(startToken)
+	
+	-- If multiple targets, get the one with the center closest to the coordinates and try to avoid returning the same token
+	if startTokens then
+		if #startTokens == 1 then
+			startToken = startTokens[1]
+		elseif #startTokens > 1 then
+			local testX = 0
+			local testY = 0
+			local minDistance = gridsize * 1000  -- Really just want a really big number
+			for _, token in pairs(startTokens) do
+				testX, testY = token.getPosition()
+				local testDistance = math.sqrt((testX-startX)^2 + (testY-startY)^2)
+				if testDistance < minDistance then
+					minDistance = testDistance
+					startToken = token
+				end
+			end
+		end
+		if startToken then
+			startCTnode = CombatManager.getCTFromToken(startToken)
+		end
 	end
 	
-	local endTokens = getTokensWithinSquare(endX, endY, units/4)		
-	if endTokens and endTokens[1] then
-		endToken = endTokens[1]
-		endCTnode = CombatManager.getCTFromToken(endToken)
-	end
+	-- same as above, but use <= in distance test to help avoid returning the same token
+	local endTokens = getTokensWithinSquare(endX, endY, units/4)
+	if endTokens then
+		if #endTokens == 1 then
+			endToken = endTokens[1]
+		elseif #endTokens > 1 then
+			local testX = 0
+			local testY = 0
+			local minDistance = gridsize * 1000  -- Really just want a really big number
+			for _, token in pairs(endTokens) do
+				testX, testY = token.getPosition()
+				local testDistance = math.sqrt((testX-endX)^2 + (testY-endY)^2)
+				if testDistance < minDistance then
+					minDistance = testDistance
+					endToken = token
+				end
+			end
+		end
+		if endToken then
+			endCTnode = CombatManager.getCTFromToken(endToken)
+		end
+	end		
 	
 	return startCTnode, endCTnode
 end
