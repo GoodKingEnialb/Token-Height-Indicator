@@ -1,3 +1,7 @@
+----------------------
+--    OVERRIDES     --
+----------------------
+
 -- Variables
 local notchScale = 5
 local heightUnits = ' ft'
@@ -31,15 +35,15 @@ function onInit()
 	Token.onWheel = onWheel
 	Token.getDistanceBetween = getDistanceBetween
 	Token.getTokensWithinDistance = getTokensWithinDistance
+	TokenManager.updateSizeHelper = updateSizeHelper
 
 	TokenManager.onTokenAdd = onTokenAdd
 	TokenManager.onTokenDelete = onTokenDelete
 	CombatManager.getCTFromToken = getCTFromToken
-	TokenManager.updateSizeHelper = updateSizeHelper
 
 	-- Register clients for height changes and server to give ownership if client tries to update first
     OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_TOKENHEIGHTCHANGE, updateTokenHeightIndicators)
-    OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_REQUESTOWNERSHIP, updateOwnership)
+	OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_REQUESTOWNERSHIP, updateOwnership)
 	OOBManager.registerOOBMsgHandler(OOB_MSGTYPE_REFRESHHEIGHTS, refreshHeights)
 end
 
@@ -123,6 +127,147 @@ function registerOptions()
 	setFont()
 end
 
+function getDistanceBetween(sourceItem, targetItem)
+	--Debug.console("GDB_orig = " .. getDistanceBetween_orig(sourceItem, targetItem))
+	   local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(sourceItem, false)
+	   if ctrlImage then
+		  return ctrlImage.getDistanceBetween(sourceItem, targetItem)
+	   else
+		  ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(targetItem, false)
+		  if ctrlImage then
+			 return ctrlImage.getDistanceBetween(sourceItem, targetItem)
+		  else
+			 return 0
+		  end
+	   end		 
+	end
+	
+function getTokensWithinDistance(sourceItem, distance)
+	local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(sourceItem, false)
+	if ctrlImage then
+		return ctrlImage.getTokensWithinDistance(sourceItem, distance)
+	else
+		return {}
+	end		 
+end
+
+-- Simplified greatly by Kelrugem (with help from Moon Wizard) - don't completely override onWheel, as the original gets run in semi-parallel
+function onWheel(tokenCT, notches)
+    if Input.isAltPressed() then  
+        TokenHeight.updateHeight(tokenCT, notches)
+        return true;
+    end
+end
+
+-- Called when a token is first added to a map
+function onTokenAdd(tokenMap)
+	onTokenAdd_orig(tokenMap)
+	local ctNode = getCTFromToken(tokenMap)
+	local heightHolder = DB.getChild(ctNode, "heightvalue")
+	if heightHolder and heightHolder.getValue() then
+        local nHeight = tonumber(heightHolder.getValue())   
+		setHeight(tokenMap, nHeight)
+	end
+end
+
+-- Called when a token is removed to a map
+function onTokenDelete(tokenMap)
+	if Session.IsHost then
+		setHeight(tokenMap, 0)
+	end
+	onTokenDelete_orig(tokenMap)
+end
+
+function getCTFromToken(token)
+	if token and token.getContainerNode then
+		return getCTFromToken_orig(token)
+	else
+		return nil
+	end
+end
+
+function updateSizeHelper(ctToken, ctNode)
+	updateSizeHelper_orig(ctToken, ctNode)
+
+	local nDU = GameSystem.getDistanceUnitsPerGrid()
+	ctToken.nSpace = math.ceil(DB.getValue(ctNode, "space", nDU) / nDU)
+end
+
+
+--------------------------
+--    MAIN FUNCTIONS    --
+--------------------------
+	
+-- Sets and displays the height of the token
+function updateHeight(token, notches)
+    if not token or notches == 0 then
+        return
+    end
+
+	local nHeight = getHeight(token)
+	
+    -- update height
+    nHeight = nHeight + (notchScale * notches)
+	
+	local ctNode = getCTFromToken(token)
+	if not ctNode then
+		return
+	end
+	
+	if Session.IsHost then 
+		setHeight(token, nHeight)
+		notifyHeightChange(token)
+	elseif bPlayerControl then
+		requestOwnership(token, nHeight)
+	end
+end
+
+function setHeight(token, nHeight)
+    if not token then
+        return
+    end
+
+	-- get the height value from the DB
+	local cNode = token.getContainerNode()
+	if not cNode then
+		return
+	end
+
+	if nHeight ~= getHeight(token) then
+		local ctNode = getCTFromToken(token)
+
+		if ctNode and Session.IsHost then
+			DB.setValue(ctNode, "heightvalue", "number", nHeight)
+			DB.setValue(cNode, getHeightKey(token), "number", nHeight)
+			jiggle(token, true)
+		end
+	end
+end
+
+-- See image.getTokensWithinShapeFromToken for parameter details
+function getTokensWithinShape(originToken, shape, distance, height, width, azimuthalAngle, polarAngle)
+	local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(originToken, false)
+	if ctrlImage then
+	   return ctrlImage.getTokensWithinShapeFromToken(originToken, shape, distance, height, width, azimuthalAngle, polarAngle)
+	else
+	   return {}
+	end		 
+ end
+ 
+function getHeight(token)
+	local cNode = token.getContainerNode()
+	local heightHolder = DB.getChild(cNode, getHeightKey(token))
+	local nHeight = 0
+	if heightHolder and heightHolder.getValue() then
+        nHeight = tonumber(heightHolder.getValue())   
+    end
+	return nHeight
+end
+
+--------------------------
+-- SUPPORTING FUNCTIONS --
+--------------------------
+
 function setPlayerControl()
 	if OptionsManager.getOption("THIALLOWUSERADJUST") == "yes" then
 		bPlayerControl = true
@@ -142,48 +287,6 @@ function setFont()
 		heightFont = ''
 	end
 	heightFont = heightFont .. "_" .. sFontColor
-end
-
-function getDistanceBetween(sourceItem, targetItem)
---Debug.console("GDB_orig = " .. getDistanceBetween_orig(sourceItem, targetItem))
-   local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(sourceItem, false)
-   if ctrlImage then
-      return ctrlImage.getDistanceBetween(sourceItem, targetItem)
-   else
-      ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(targetItem, false)
-      if ctrlImage then
-         return ctrlImage.getDistanceBetween(sourceItem, targetItem)
-      else
-         return 0
-	  end
-   end		 
-end
-
-function getTokensWithinDistance(sourceItem, distance)
-   local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(sourceItem, false)
-   if ctrlImage then
-      return ctrlImage.getTokensWithinDistance(sourceItem, distance)
-   else
-      return {}
-   end		 
-end
-
--- See image.getTokensWithinShapeFromToken for parameter details
-function getTokensWithinShape(originToken, shape, distance, height, width, azimuthalAngle, polarAngle)
-	local ctrlImage, winImage, bWindowOpened = ImageManager.getImageControl(originToken, false)
-	if ctrlImage then
-	   return ctrlImage.getTokensWithinShapeFromToken(originToken, shape, distance, height, width, azimuthalAngle, polarAngle)
-	else
-	   return {}
-	end		 
- end
-
--- Simplified greatly by Kelrugem (with help from Moon Wizard) - don't completely override onWheel, as the original gets run in semi-parallel
-function onWheel(tokenCT, notches)
-    if Input.isAltPressed() then  
-        TokenHeight.updateHeight(tokenCT, notches);
-        return true;
-    end
 end
 
 -- Moves a token one off of center or back to center.
@@ -208,80 +311,11 @@ function jiggle(token)
 	end
 end
 
-
--- Sets and displays the height of the token
-function updateHeight(token, notches)
-    if not token then
-        return
-    end
-
-	-- get the height value from the DB
-    local ctNode = CombatManager.getCTFromToken(token)
-	if not ctNode then
-		return
-	end
-
-    local dbNode = DB.getChild(ctNode, "heightvalue")
-    local nHeight = 0
-	
-    if dbNode ~= nil and dbNode.getValue() ~= nil then
-        nHeight = tonumber(dbNode.getValue());   
-    end
-	
-    -- update height
-    nHeight = nHeight + (notchScale * notches)
-	
-	if (ctNode.isOwner() and bPlayerControl) or Session.IsHost then
-		DB.setValue(ctNode, "heightvalue", "number", nHeight)
-		-- Jiggle the token to force a redraw of the range arrow
-		if (notches ~= 0) then
-			-- Move a single pixel to force the arrow redraw.  
-			jiggle(token, true)
-
-			-- If the aura effect extension is loaded, force it to re-evaluate the token, with thanks to SilentRuin
-			if AuraEffect and AuraEffect.notifyTokenMove then
-				AuraEffect.notifyTokenMove(token); 
-		 	end
-		end
-	else
-		requestOwnership(token, nHeight)
-	end
-			
-	if Session.IsHost and token.getOwner then
-	  DB.setOwner(ctNode, token.getOwner())
-	end
-	
-	notifyHeightChange(ctNode)
-end
-
-function setHeight(token, nHeight)
-    if not token then
-        return
-    end
-	-- get the height value from the DB
-    local ctNode = CombatManager.getCTFromToken(token)
-	if not ctNode then
-		return
-	end
-
-    local dbNode = DB.getChild(ctNode, "heightvalue")
-	
-	if (ctNode.isOwner() and bPlayerControl) or Session.IsHost then
-		DB.setValue(ctNode, "heightvalue", "number", nHeight)
-		local x, y = token.getPosition()
-		token.setPosition(x+1,y+1)
-		token.setPosition(x,y)	
-	end
-end
-
 -- Displays the heights of all tokens
-function refreshHeights()
-	--if Session.IsHost then
-		for _,ctNode in pairs(CombatManager.getCombatantNodes()) do
-			local token = CombatManager.getTokenFromCT(ctNode)
-			updateHeight(token, 0)	
-		end
-	--end
+function refreshHeights(tokenList)
+	for _,token in pairs(tokenList) do
+		notifyHeightChange(token)
+	end
 end
 
 function updateUnits(image)
@@ -295,38 +329,31 @@ function updateUnits(image)
 	end
 end
 
-function getHeight(ctNode)
-	local heightHolder = DB.getChild(ctNode, "heightvalue")
-	local nHeight = 0
-	if heightHolder and heightHolder.getValue() then
-        nHeight = tonumber(heightHolder.getValue())   
-    end
-	return nHeight
-end
 
--- notifies clients that height changed
-function notifyHeightChange(ctNode)
+-- notifies clients and other extensions that height changed
+function notifyHeightChange(token)
+	-- If the aura effect extension is loaded, force it to re-evaluate the token, with thanks to SilentRuin
+	if AuraEffect and AuraEffect.notifyTokenMove then
+		AuraEffect.notifyTokenMove(token); 
+	end
+
     local msgOOB = {}
     msgOOB.type = OOB_MSGTYPE_TOKENHEIGHTCHANGE
-	msgOOB.sNode = ctNode.getNodeName()
+	local ctNode = getCTFromToken(token)
+	msgOOB.sNode = nil
+	if ctNode then
+		msgOOB.sNode = ctNode.getNodeName()
+	end
     Comm.deliverOOBMessage(msgOOB)
 end
 
 -- notifies clients to update token height
 function updateTokenHeightIndicators(msgOOB)
-	if (msgOOB.node == "all") then
-		for _, ctNode in pairs(CombatManager.getCombatantNodes()) do
-			if (msgOOB.node == "all") then
-				displayHeight(DB.getChild(ctNode, "heightvalue"))
-			elseif (msgOOB.node == tostring(ctNode)) then
-				displayHeight(DB.getChild(ctNode, "heightvalue"))
-				break
-			end
-		end
-	else
+	if msgOOB.sNode then
 		local ctNode = DB.findNode(msgOOB.sNode)
 		if ctNode then
-			displayHeight(DB.getChild(ctNode, "heightvalue"))
+			local token = CombatManager.getTokenFromCT(ctNode)
+			displayHeight(token)
 		end
 	end
 end
@@ -336,45 +363,48 @@ function requestOwnership(token, nHeight)
 	-- TODO Figure out how to pass token to host
     local msgOOB = {}
     msgOOB.type = OOB_MSGTYPE_REQUESTOWNERSHIP
-	msgOOB.token = token
+
+	local ctNode = getCTFromToken(token)
+	msgOOB.sNode = nil
+	if ctNode then
+		msgOOB.sNode = ctNode.getNodeName()
+	end
 	msgOOB.newHeight = nHeight
     Comm.deliverOOBMessage(msgOOB)
 end
 
 -- grant ownership
 function updateOwnership(msgOOB)
-	-- TODO ideally the client would pass the node and height, but not sure how to pass node, so set all the unowned owners here
 	if Session.IsHost then
-		for _, ctNode in pairs(CombatManager.getCombatantNodes()) do
-			local token = CombatManager.getTokenFromCT(ctNode)
-			if token and token.getOwner then
-				DB.setOwner(ctNode, token.getOwner())
+		if msgOOB.sNode then
+			local ctNode = DB.findNode(msgOOB.sNode)
+			if ctNode then
+				local token = CombatManager.getTokenFromCT(ctNode)
+				if token then
+					setHeight(token, msgOOB.newHeight)
+					notifyHeightChange(token)
+				end
 			end
 		end
 	end
 end
 
-
-
-function displayHeight(heightWidget) 
-    if not heightWidget then
+function displayHeight(token)
+    if not token then
         return
     end
-	
-	local ctNode = heightWidget.getParent()
-    local ctToken = CombatManager.getTokenFromCT(ctNode)
-	if not (ctToken) then
-		return
-	end
+
+	local cNode = token.getContainerNode()
+	local heightValueContainer = DB.getChild(cNode, getHeightKey(token))
 	local nHeight = 0
 	
-	if heightWidget.getValue() ~= nil then
-        nHeight = tonumber(heightWidget.getValue());   
+	if heightValueContainer and heightValueContainer.getValue() ~= nil then
+        nHeight = tonumber(heightValueContainer.getValue())  
     end
 	
-	local widget = ctToken.findWidget("heightindication")
+	local widget = token.findWidget("heightindication")
 	if widget == nil then
-		widget = ctToken.addTextWidget( "mini_name", '' )
+		widget = token.addTextWidget( "mini_name", '' )
 		if heightFont ~= '' then
 			widget.setFont(heightFont)
 		end
@@ -399,11 +429,12 @@ end
 function changeOptions()
 	setFont()
 	for _, ctNode in pairs(CombatManager.getCombatantNodes()) do
-	    local ctToken = CombatManager.getTokenFromCT(ctNode)
-		if ctToken then
-			local widget = ctToken.findWidget("heightindication")
+	    local token = CombatManager.getTokenFromCT(ctNode)
+		if token then
+			local cNode = token.getContainerNode()
+			local widget = cNode.findWidget("heightindication")
 			if widget then	
-				local dbNode = DB.getChild(ctNode, "heightvalue")
+				local dbNode = DB.getChild(cNode, getHeightKey(token))
 				local nHeight = 0
 			
 				if dbNode ~= nil and dbNode.getValue() ~= nil then
@@ -430,31 +461,7 @@ function changeOptions()
     end
 end
 
--- Called when a token is first added to a map
-function onTokenAdd(tokenMap)
-	onTokenAdd_orig(tokenMap)
-	if Session.IsHost then
-		updateHeight(tokenMap, 0)
-	end
-end
-
--- Called when a token is removed to a map
-function onTokenDelete(tokenMap)
-	if Session.IsHost then
-		setHeight(tokenMap, 0)
-	end
-	onTokenDelete_orig(tokenMap)
-end
-
-function getCTFromToken(token)
-	if token and token.getContainerNode then
-		return getCTFromToken_orig(token)
-	else
-		return nil
-	end
-end
-
-function updateSizeHelper(ctToken, ctNode)
-	updateSizeHelper_orig(ctToken, ctNode)
-	local ctrlImage = ImageManager.getImageControl(ctToken, false)
+function getHeightKey(token)
+	local heightKey = token.getId() .. "-heightvalue"
+	return heightKey
 end

@@ -1,6 +1,8 @@
 ----------------------
--- CUSTOM ADDITIONS --
+--    OVERRIDES     --
 ----------------------
+
+-- Variables
 local lastGridSize = 43
 local lastUnits = 5
 local lastSuffix = "ft"
@@ -13,160 +15,9 @@ function onInit()
 		super.onInit();
 	end
 
-	_, units, suffix, _ = getImageSettings();
+	_, units, suffix, _ = getImageSettings()
 
-	TokenHeight.refreshHeights();
---	local tTokens = self.getTokens();
---	for _, token in pairs(tTokens) do
---		local nodeCT = CombatManager.getCTFromToken(token);
---		DB.addHandler(DB.getPath(nodeCT, "heightvalue"), "onUpdate", updatePointer);
---	end
-end
-
---function onClose()
---	local tTokens = self.getTokens();
---	for _, token in pairs(tTokens) do
---		local nodeCT = CombatManager.getCTFromToken(token);
---		DB.removeHandler(DB.getPath(nodeCT, "heightvalue"), "onUpdate", updatePointer);
---	end
---	if super and super.onClose then
---		super.onClose();
---	end
---end
-
---function onTokenAdded(prototypename, x, y)
---	local token;
---	if super and super.onTokenAdded then
---		token = super.onTokenAdded(prototypename, x, y);
---	end
---	if token then
---		local nodeCT = CombatManager.getCTFromToken(token);
---		DB.addHandler(DB.getPath(nodeCT, "heightvalue"), "onUpdate", updatePointer);
---	end
---	return token;
---end
-
---function clearSelectedTokens()
---	local tTokens = self.getSelectedTokens();
---	for _, token in pairs(tTokens) do
---		local nodeCT = CombatManager.getCTFromToken(token);
---		DB.removeHandler(DB.getPath(nodeCT, "heightvalue"), "onUpdate", updatePointer);
---	end
---	if super and super.clearSelectedTokens then
---		super.clearSelectedTokens();
---	end
---end
-
--- Updates and gets the distance that is the label for the pointers that have changed because height changed however.....
--- When we get the value I have no idea how to set the label. Is this internal to the engine and we can never get to it?
--- That seems weird if so but perhaps. Anyhow all the pieces are here if you can get a handle to the pointer itself.
---function updatePointer(nodeHeightValue)
---	local nGridSize, nUnits, suffix, diagmult = getImageSettings();
---	if nGridSize ~= 0 then
---		local nodeCT = nodeHeightValue.getParent();
---		local tokenCT = CombatManager.getTokenFromCT(nodeCT);
---		local rActor = ActorManager.resolveActor(nodeCT);
---		local nTokenCTX, nTokenCTY = tokenCT.getPosition();
---		local tTargets = TargetingManager.getFullTargets(rActor);
---
---		for _, rTarget in pairs(tTargets) do
---			local nodeTargetCT = ActorManager.getCTNode(rTarget);
---			local tokenTargetCT = CombatManager.getTokenFromCT(nodeTargetCT);
---			local nTokenTargetCTX, nTokenTargetCTY = tokenTargetCT.getPosition();
---			local nDistance = super.getDistanceBetween(tokenCT, tokenTargetCT);
---
---			Debug.chat("Distance: " .. onMeasurePointer(nDistance*nGridSize/nUnits, "arrow", nTokenCTX, nTokenCTY, nTokenTargetCTX, nTokenTargetCTY));
---		end
---
---		local tTokens= self.getTokens();
---		for _, token in pairs(tTokens) do
---			if tokenCT.isTargetedBy(token) then
---				local nTokenX, nTokenY = token.getPosition();
---				local nDistance = super.getDistanceBetween(tokenCT, token);
---				Debug.chat("Distance: " .. onMeasurePointer(nDistance*nGridSize/nUnits, "arrow", nTokenCTX, nTokenCTY, nTokenX, nTokenY));
---			end
---		end
---	end
---end
-
-function getImageSettings()
-	local gridsize = lastGridSize
-	if getGridSize then
-		gridsize = getGridSize()
-		lastGridSize = gridsize
-	end
-	
-	local units = lastUnits
-	if (getDatabaseNode and DB.getValue(getDatabaseNode(), "distancebaseunit")) or getDistanceBaseUnits then
-		units = DB.getValue(getDatabaseNode(), "distancebaseunit") or getDistanceBaseUnits()
-		lastUnits = units	
-	end
-		
-	local suffix = lastSuffix
-	if getDistanceSuffix then
-		suffix = getDistanceSuffix()
-		lastSuffix = suffix
-	end
-	
-	local diagmult = lastDiag	
-	if getDistanceDiagMult or (Interface and Interface.getDistanceDiagMult) then
-		diagmult = getDistanceDiagMult() or Interface.getDistanceDiagMult()
-		lastDiag = diagmult	
-	end
-
-	return gridsize, units, suffix, diagmult
-end
-
--- Returns the coordinates of an item and its corresponding token
-function getCoordinatesOfItem(sourceItem)
-	if not sourceItem or not CombatManager then
-		return nil, nil, nil, nil
-	end
-	
-	local gridsize, units, _, _ = getImageSettings()
-
-	local startX = 0
-	local startY = 0
-	local startZ = 0
-
-	local ctNodeOrigin
-	local sourceToken
-	
-	if type(sourceItem) == "number" then 
-		sourceToken = getTokenOfTokenId(sourceItem)
-	else
-		sourceToken = sourceItem
-	end
-	
-	if sourceToken.getContainerNode then
-		startX, startY = sourceToken.getPosition()
-		ctNodeOrigin = CombatManager.getCTFromToken(sourceToken)
-		if ctNodeOrigin then
-			startZ = TokenHeight.getHeight(ctNodeOrigin) * gridsize / units
-		end
-	else
-		startX, startY = sourceToken['x'], sourceToken['y']  
-	end
-	return startX, startY, startZ, sourceToken
-end
-
--- Get coordinates of two items (needed in case they're of different types because of needing to invert Y)
-function getCoordinatesOfItems(sourceItem, targetItem)
-	if not sourceItem or not CombatManager then
-		return nil, nil, nil, nil, nil, nil, nil, nil
-	end
-	
-	local gridsize, units, _, _ = getImageSettings()
-
-	local startX, startY, startZ, sourceToken = getCoordinatesOfItem(sourceItem)
-	local endX, endY, endZ, targetToken = getCoordinatesOfItem(targetItem)
-	
-	if not sourceToken.getContainerNode and targetToken.getContainerNode then
-		startY = startY * -1 
-	elseif sourceToken.getContainerNode and not targetToken.getContainerNode then
-		endY = endY * -1 		
-	end
-	return startX, startY, startZ, sourceToken, endX, endY, endZ, targetToken
+	TokenHeight.refreshHeights(getTokens())
 end
 
 function getDistanceBetween(sourceItem, targetItem)
@@ -178,18 +29,18 @@ function getDistanceBetween(sourceItem, targetItem)
 	-- of the containers closest to each other (but if one is a container and the other is not, have to flip the y coordinate of the non-container)
 	local startX, startY, startZ, sourceToken = getCoordinatesOfItem(sourceItem)
 	local endX, endY, endZ, targetToken = getCoordinatesOfItem(targetItem)
---	local startX, startY, startZ, sourceToken, endX, endY, endZ, targetToken = getCoordinatesOfItems(sourceItem, targetItem)
 
 	if sourceToken.getContainerNode and targetToken.getContainerNode then
 		startX, startY, startZ = getClosestPosition(sourceToken, targetToken)
 		endX, endY, endZ = getClosestPosition(targetToken, sourceToken)
 	end
 
---Debug.console("distanceBetween " .. sourceToken.getName() .. " and " .. targetToken.getName())
+	--Debug.console("distanceBetween " .. sourceToken.getName() .. " and " .. targetToken.getName())
 	return distanceBetween(startX, startY, startZ, endX, endY, endZ, false)
 end
 
 function getTokensWithinDistance(sourceItem, distance)
+
 	if not sourceItem or not CombatManager then
 		return {}
 	end
@@ -204,7 +55,6 @@ function getTokensWithinDistance(sourceItem, distance)
 	local endY = 0
 	local endZ = 0
 
-	local ctNodeOrigin
 	local sourceToken
 	local targetToken
 	
@@ -212,15 +62,11 @@ function getTokensWithinDistance(sourceItem, distance)
 
 	startX, startY, startZ, sourceToken = getCoordinatesOfItem(sourceItem)
 	
-	for _,ctNode in pairs(CombatManager.getCombatantNodes()) do
-		targetToken = CombatManager.getTokenFromCT(ctNode)
+	for _,targetToken in pairs(getTokens()) do
 		-- Arnagus fix for targets on multiple maps
 		if targetToken and targetToken ~= sourceToken then
 
-			local endZ = 0
-			if targetToken then
-				endZ = TokenHeight.getHeight(ctNode) * gridsize / units
-			end
+			local endZ = TokenHeight.getHeight(targetToken) * gridsize / units
 			
 			if not sourceToken.getContainerNode then
 				startX, startY = sourceToken['x'], sourceToken['y']
@@ -240,15 +86,73 @@ function getTokensWithinDistance(sourceItem, distance)
 	return closeTokens
 end
 
--- Get all tokens within a shape (including the origin token).  See getTokensWithinShape for details.
-function getTokensWithinShapeFromToken(originItem, shape, distance, height, width, azimuthalAngle, polarAngle)
-	local originX, originY, originZ, originToken = getCoordinatesOfItem(originItem)
-	if not originX then
-		return nil
+function onMeasurePointer(pixellength,pointertype,startX,startY,endX,endY)
+	-- Modified by SilentRuin to better integrate with the superclasses and optimize
+	local retStr = nil -- we will not do anything with label but if someone ever does we can handle the that code first
+	if super and super.onMeasurePointer then
+		retStr = super.onMeasurePointer(pixellength, pointertype, startX, startY, endX, endY)
 	end
 
-	return getTokensWithinShape(originX, originY, originZ, shape, distance, height, width, azimuthalAngle, polarAngle)
+	local gridsize, units, suffix, diagmult = getImageSettings()
+	local heightOrigin = 0
+	local heightTarget = 0
+
+	local tokenOrigin, tokenTarget = getTokensAt(startX, startY, endX, endY)
+	if tokenOrigin and tokenTarget then
+		heightOrigin = TokenHeight.getHeight(tokenOrigin)
+		heightTarget = TokenHeight.getHeight(tokenTarget)
+		
+		if not (gridsize and units and suffix and diagmult) then 
+			return retStr
+		end
+		local bSquare = false
+		if pointertype == "rectangle" then
+			bSquare = true
+		end
+
+		local startZ = 0
+		local endZ = 0
+		startZ = heightOrigin * gridsize / units
+		endZ = heightTarget * gridsize / units
+
+		--Debug.console("OMP: distanceBetween " .. tokenOrigin.getName() .. " and " .. tokenTarget.getName() )
+		local distance = distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
+
+		if distance == 0 then
+			retStr = ""
+		else
+			local stringDistance = nil
+			if diagmult == 0 then
+				stringDistance = string.format("%.1f", distance)
+			else
+				stringDistance = string.format("%.0f", distance)	
+			end
+			retStr = stringDistance .. suffix
+		end
+
+		--Debug.console("OMP: " .. tokenOrigin.getName() .. " is " .. distance .. ": " .. startX .. "," .. startY .. "," .. startZ .. ": " .. endX .. "," .. endY .. "," .. endZ .. ": " .. retStr) 
+	end
+	return retStr
 end
+
+-- From diablobob and bratch9
+function onDrop(x, y, draginfo)
+	if draginfo.getType() == "token" then
+		local custData = {}
+		custData.x = x
+		custData.y = y
+		custData.imgCtrl = self
+		draginfo.setCustomData(custData)
+	end
+
+	if super and super.onDrop then
+		return super.onDrop(x, y, draginfo)
+	end
+end
+
+----------------------
+-- SHAPE FUNCTIONS  --
+----------------------
 
 -- Get all tokens within a shape (including the origin token, if any).  Any token with any part of its containing cube will be returned.
 -- The parameters for each type of shape are:
@@ -286,19 +190,26 @@ function getTokensWithinShape(originX, originY, originZ, shape, distance, height
 	end
 end
 
+-- Get all tokens within a shape (including the origin token).  See getTokensWithinShape for details.
+function getTokensWithinShapeFromToken(originItem, shape, distance, height, width, azimuthalAngle, polarAngle)
+	local originX, originY, originZ, originToken = getCoordinatesOfItem(originItem)
+	if not originX then
+		return nil
+	end
+
+	return getTokensWithinShape(originX, originY, originZ, shape, distance, height, width, azimuthalAngle, polarAngle)
+end
+
 function getTokensWithinSphere(startX, startY, startZ, radius)
 	local gridsize, units, _, _ = getImageSettings()
 	local closeTokens = {}
 	
-	for _,ctNode in pairs(CombatManager.getCombatantNodes()) do
-		targetToken = CombatManager.getTokenFromCT(ctNode)
-		if targetToken then
-			local endX, endY, endZ = getClosestPositionToReference(targetToken, startX, startY, startZ)
+	for _,targetToken in pairs(getTokens()) do
+		local endX, endY, endZ = getClosestPositionToReference(targetToken, startX, startY, startZ)
 
-			local distanceToToken = distanceBetween(startX, startY, startZ, endX, endY, endZ, true) / 2
-			if  distanceToToken < radius then
-				table.insert(closeTokens, targetToken)
-			end
+		local distanceToToken = distanceBetween(startX, startY, startZ, endX, endY, endZ, true) / 2
+		if  distanceToToken < radius then
+			table.insert(closeTokens, targetToken)
 		end
 	end
 
@@ -316,13 +227,10 @@ function getTokensWithinCube(startX, startY, startZ, length)
 	local testMaxZ = startZ + halfLengthInPixels	
 	local closeTokens = {}
 	
-	for _,ctNode in pairs(CombatManager.getCombatantNodes()) do
-		targetToken = CombatManager.getTokenFromCT(ctNode)
-		if targetToken then
-			local tokenMinX, tokenMaxX, tokenMinY, tokenMaxY, tokenMinZ, tokenMaxZ = getTokenBounds(targetToken)
-			if MathFunctions.cubesOverlap(testMinX, testMaxX, testMinY, testMaxY, testMinZ, testMaxZ, tokenMinX, tokenMaxX, tokenMinY, tokenMaxY, tokenMinZ, tokenMaxZ) then
-				table.insert(closeTokens, targetToken)
-			end
+	for _,targetToken in pairs(getTokens()) do
+		local tokenMinX, tokenMaxX, tokenMinY, tokenMaxY, tokenMinZ, tokenMaxZ = getTokenBounds(targetToken)
+		if MathFunctions.cubesOverlap(testMinX, testMaxX, testMinY, testMaxY, testMinZ, testMaxZ, tokenMinX, tokenMaxX, tokenMinY, tokenMaxY, tokenMinZ, tokenMaxZ) then
+			table.insert(closeTokens, targetToken)
 		end
 	end
 
@@ -338,13 +246,10 @@ function getTokensWithinSquare(startX, startY, length)
 	local testMaxY = startY + halfLengthInPixels
 	local closeTokens = {}
 	
-	for _,ctNode in pairs(CombatManager.getCombatantNodes()) do
-		targetToken = CombatManager.getTokenFromCT(ctNode)
-		if targetToken then
-			local tokenMinX, tokenMaxX, tokenMinY, tokenMaxY, _, _ = getTokenBounds(targetToken)
-			if MathFunctions.squaresOverlap(testMinX, testMaxX, testMinY, testMaxY, tokenMinX, tokenMaxX, tokenMinY, tokenMaxY) then
-				table.insert(closeTokens, targetToken)
-			end
+	for _,targetToken in pairs(getTokens()) do
+		local tokenMinX, tokenMaxX, tokenMinY, tokenMaxY, _, _ = getTokenBounds(targetToken)
+		if MathFunctions.squaresOverlap(testMinX, testMaxX, testMinY, testMaxY, tokenMinX, tokenMaxX, tokenMinY, tokenMaxY) then
+			table.insert(closeTokens, targetToken)
 		end
 	end
 
@@ -355,19 +260,16 @@ function getTokensWithinCylinder(startX, startY, startZ, radius, height)
 	local gridsize, units, _, _ = getImageSettings()
 	local closeTokens = {}
 	
-	for _,ctNode in pairs(CombatManager.getCombatantNodes()) do
-		local targetToken = CombatManager.getTokenFromCT(ctNode)
-		if targetToken then
-			local endX, endY, _ = getClosestPositionToReference(targetToken, startX, startY, 0)
-			local endZ = TokenHeight.getHeight(ctNode)
+	for _,targetToken in pairs(getTokens()) do
+		local endX, endY, _ = getClosestPositionToReference(targetToken, startX, startY, 0)
+		local endZ = TokenHeight.getHeight(targetToken)
 
-			local flatDistance = MathFunctions.magnitude(endX-startX,endY-startY,0) / gridsize * units
-			local minHeight = startZ
-			local maxHeight = startZ + height
+		local flatDistance = MathFunctions.magnitude(endX-startX,endY-startY,0) / gridsize * units
+		local minHeight = startZ
+		local maxHeight = startZ + height
 
-			if (flatDistance <= radius) and (endZ >= minHeight) and (endZ <= maxHeight) then
-				table.insert(closeTokens, targetToken)
-			end
+		if (flatDistance <= radius) and (endZ >= minHeight) and (endZ <= maxHeight) then
+			table.insert(closeTokens, targetToken)
 		end
 	end
 
@@ -393,41 +295,37 @@ function getTokensWithinLine(originX, originY, originZ, length, width, azimuthal
 	local deltaCylZ = cylinderEndZ-originZ
 
 	
-	for _,ctNode in pairs(CombatManager.getCombatantNodes()) do
-		targetToken = CombatManager.getTokenFromCT(ctNode)
-		if targetToken then
+	for _,targetToken in pairs(getTokens()) do
+		local overlapsLine = false
 
-			local overlapsLine = false
+		-- Get closest point on line to the target, then the closest point on the target to that point.  Then see if within the line.
+		local tx,ty,tz = getCoordinatesOfItem(targetToken)
+		local cpx, cpy, cpz, bBeyondLine = MathFunctions.closestPointOnLine(tx, ty, tz, originX, originY, originZ, cylinderEndX, cylinderEndY, cylinderEndZ)
+		if not bBeyondLine then
+			local targetX, targetY, targetZ = getClosestPositionToReference(targetToken, cpx, cpy, cpz)
 
-			-- Get closest point on line to the target, then the closest point on the target to that point.  Then see if within the line.
-			local tx,ty,tz = getCoordinatesOfItem(targetToken)
-			local cpx, cpy, cpz, bBeyondLine = MathFunctions.closestPointOnLine(tx, ty, tz, originX, originY, originZ, cylinderEndX, cylinderEndY, cylinderEndZ)
-			if not bBeyondLine then
-				local targetX, targetY, targetZ = getClosestPositionToReference(targetToken, cpx, cpy, cpz)
-
-				-- Get deltas of test point to the end points of the cylinder
-				local deltaStartX = targetX-originX
-				local deltaStartY = targetY-originY
-				local deltaStartZ = targetZ-originZ
-				local deltaEndX = targetX-cylinderEndX
-				local deltaEndY = targetY-cylinderEndY
-				local deltaEndZ = targetZ-cylinderEndZ
+			-- Get deltas of test point to the end points of the cylinder
+			local deltaStartX = targetX-originX
+			local deltaStartY = targetY-originY
+			local deltaStartZ = targetZ-originZ
+			local deltaEndX = targetX-cylinderEndX
+			local deltaEndY = targetY-cylinderEndY
+			local deltaEndZ = targetZ-cylinderEndZ
 
 				-- Check that target lies between the planes of the two circular facets of the cylinder
-				if (MathFunctions.dotProduct(deltaStartX, deltaStartY, deltaStartZ, deltaCylX, deltaCylY, deltaCylZ) >= 0) and (MathFunctions.dotProduct(deltaEndX, deltaEndY, deltaEndZ, deltaCylX, deltaCylY, deltaCylZ) <= 0) then
+			if (MathFunctions.dotProduct(deltaStartX, deltaStartY, deltaStartZ, deltaCylX, deltaCylY, deltaCylZ) >= 0) and (MathFunctions.dotProduct(deltaEndX, deltaEndY, deltaEndZ, deltaCylX, deltaCylY, deltaCylZ) <= 0) then
 
-					-- Check that target is inside of the curved surface of the cylinder
-					local crossX, crossY, crossZ = MathFunctions.crossProduct(deltaStartX, deltaStartY, deltaStartZ, deltaCylX, deltaCylY, deltaCylZ)
-					local crossMag = MathFunctions.magnitude(crossX, crossY, crossZ)
-					local cylMag = MathFunctions.magnitude(deltaCylX, deltaCylY, deltaCylZ)
-					if crossMag / cylMag <= w then
-						overlapsLine = true
-					end
+				-- Check that target is inside of the curved surface of the cylinder
+				local crossX, crossY, crossZ = MathFunctions.crossProduct(deltaStartX, deltaStartY, deltaStartZ, deltaCylX, deltaCylY, deltaCylZ)
+				local crossMag = MathFunctions.magnitude(crossX, crossY, crossZ)
+				local cylMag = MathFunctions.magnitude(deltaCylX, deltaCylY, deltaCylZ)
+				if crossMag / cylMag <= w then
+					overlapsLine = true
 				end
+			end
 
-				if overlapsLine or lineIntersectsToken(targetToken, originX, originY, originZ, cylinderEndX, cylinderEndY, cylinderEndZ) then
-					table.insert(closeTokens, targetToken)
-				end
+			if overlapsLine or lineIntersectsToken(targetToken, originX, originY, originZ, cylinderEndX, cylinderEndY, cylinderEndZ) then
+				table.insert(closeTokens, targetToken)
 			end
 		end
 	end
@@ -452,20 +350,17 @@ function getTokensWithinCone(originX, originY, originZ, coneDistance, vertexAngl
 	local centerLineEndY = originY - cd * math.sin(math.rad((90-azimuthalAngleDeg)%360)) * math.sin(polarAngle)
 	local centerLineEndZ = originZ + cd * math.cos(polarAngle)
 
-	for _,ctNode in pairs(CombatManager.getCombatantNodes()) do
-		targetToken = CombatManager.getTokenFromCT(ctNode)
-		if targetToken then
-			local testX, testY, testZ = getClosestPositionToReference(targetToken, centerLineEndX, centerLineEndY, centerLineEndZ)
-			local cpx, cpy, cpz, bBeyondLine = MathFunctions.closestPointOnLine(testX, testY, testZ, originX, originY, originZ, centerLineEndX, centerLineEndY, centerLineEndZ)
+	for _,targetToken in pairs(getTokens()) do
+		local testX, testY, testZ = getClosestPositionToReference(targetToken, centerLineEndX, centerLineEndY, centerLineEndZ)
+		local cpx, cpy, cpz, bBeyondLine = MathFunctions.closestPointOnLine(testX, testY, testZ, originX, originY, originZ, centerLineEndX, centerLineEndY, centerLineEndZ)
 
-			if not bBeyondLine then
-				local distanceFromApex = MathFunctions.magnitude(cpx - originX, cpy - originY, cpz - originZ)
-				local radiusAtClosestPoint = distanceFromApex * math.tan(halfVertex)
-				local distance = MathFunctions.magnitude(testX-cpx, testY-cpy, testZ-cpz)
+		if not bBeyondLine then
+			local distanceFromApex = MathFunctions.magnitude(cpx - originX, cpy - originY, cpz - originZ)
+			local radiusAtClosestPoint = distanceFromApex * math.tan(halfVertex)
+			local distance = MathFunctions.magnitude(testX-cpx, testY-cpy, testZ-cpz)
 
-				if (distance <= radiusAtClosestPoint) then
-					table.insert(closeTokens, targetToken)
-				end
+			if (distance <= radiusAtClosestPoint) then
+				table.insert(closeTokens, targetToken)
 			end
 		end
 	end
@@ -532,39 +427,107 @@ function lineHit(distance1, distance2, startX, startY, startZ, dx, dy, dz, token
 	return false
 end
 
+--------------------------
+-- SUPPORTING FUNCTIONS --
+--------------------------
+
+function getImageSettings()
+	local gridsize = lastGridSize
+	if getGridSize then
+		gridsize = getGridSize()
+		lastGridSize = gridsize
+	end
+	
+	local units = lastUnits
+	if (getDatabaseNode and DB.getValue(getDatabaseNode(), "distancebaseunit")) or getDistanceBaseUnits then
+		units = DB.getValue(getDatabaseNode(), "distancebaseunit") or getDistanceBaseUnits()
+		lastUnits = units	
+	end
+		
+	local suffix = lastSuffix
+	if getDistanceSuffix then
+		suffix = getDistanceSuffix()
+		lastSuffix = suffix
+	end
+	
+	local diagmult = lastDiag	
+	if getDistanceDiagMult or (Interface and Interface.getDistanceDiagMult) then
+		diagmult = getDistanceDiagMult() or Interface.getDistanceDiagMult()
+		lastDiag = diagmult	
+	end
+
+	return gridsize, units, suffix, diagmult
+end
+
+-- Returns the coordinates of an item and its corresponding token
+function getCoordinatesOfItem(sourceItem)
+	if not sourceItem or not CombatManager then
+		return nil, nil, nil, nil
+	end
+	
+	local gridsize, units, _, _ = getImageSettings()
+
+	local startX = 0
+	local startY = 0
+	local startZ = 0
+
+	local sourceToken
+	
+	if type(sourceItem) == "number" then 
+		sourceToken = getTokenOfTokenId(sourceItem)
+	else
+		sourceToken = sourceItem
+	end
+	
+	if sourceToken.getContainerNode then
+		startX, startY = sourceToken.getPosition()
+		startZ = TokenHeight.getHeight(sourceToken) * gridsize / units
+	else
+		startX, startY = sourceToken['x'], sourceToken['y']  
+	end
+	return startX, startY, startZ, sourceToken
+end
+
+-- Get coordinates of two items (needed in case they're of different types because of needing to invert Y)
+function getCoordinatesOfItems(sourceItem, targetItem)
+	if not sourceItem or not CombatManager then
+		return nil, nil, nil, nil, nil, nil, nil, nil
+	end
+	
+	local gridsize, units, _, _ = getImageSettings()
+
+	local startX, startY, startZ, sourceToken = getCoordinatesOfItem(sourceItem)
+	local endX, endY, endZ, targetToken = getCoordinatesOfItem(targetItem)
+	
+	if not sourceToken.getContainerNode and targetToken.getContainerNode then
+		startY = startY * -1 
+	elseif sourceToken.getContainerNode and not targetToken.getContainerNode then
+		endY = endY * -1 		
+	end
+	return startX, startY, startZ, sourceToken, endX, endY, endZ, targetToken
+end
+
+
 -- Get the closest position of token 1 (center of the square contained by token 1 which is closest
 -- along a straight line to the center of token 2)
 function getClosestPosition(token1, token2)
-	local ctToken1 = CombatManager.getCTFromToken(token1)
-	local ctToken2 = CombatManager.getCTFromToken(token2)
-	if not ctToken1 or not ctToken2 then
-		return 0,0,0
-	end
-	
-	local x, y, z = getCoordinatesOfItem(token2)
+
+	local x, y, z, _ = getCoordinatesOfItem(token2)
 
 	return getClosestPositionToReference(token1, x, y, z)
 end
 
 -- Get the bounding cube for a token (min x, max x, min y, max y, min z, max z) - object is centered in the X/Y plane but at the bottom of the Z plane
 function getTokenBounds(token)
-	local ctToken = CombatManager.getCTFromToken(token)
-	if not ctToken then
-		return 0,0,0,0,0,0
-	end
-	
 	local gridsize, units, _, _ = getImageSettings()
 	local centerPosX, centerPosY, bottomPosZ = getCoordinatesOfItem(token)
 
---	local nSpace = ActorCommonManager.getSpaceReach(ctToken)
-	local nSpace = DB.getValue(ctToken, "space")
---Debug.console("Midpoint = " .. centerPosX .. "," .. centerPosY .. "," .. bottomPosZ .. " / " .. nSpace)
---Debug.console(token.getName() .. ": " .. nSpace)
+	local nSpace = token.nSpace
 	if nil == nSpace then
-		nSpace = units
+		nSpace = 1
 	end
 
-	local nHalfSpace = nSpace/2 * gridsize / units
+	local nHalfSpace = nSpace/2 * gridsize
 	local minPosX, minPosY, minPosZ, maxPosX, maxPosY, maxPosZ
 	minPosX = centerPosX-nHalfSpace
 	minPosY = centerPosY-nHalfSpace
@@ -573,7 +536,7 @@ function getTokenBounds(token)
 	maxPosY = centerPosY+nHalfSpace
 	maxPosZ = bottomPosZ+nHalfSpace*2
 
---Debug.console("Bounds = " .. minPosX .. "," .. maxPosX .. "," .. minPosY.. "," .. maxPosY.. "," .. minPosZ.. "," .. maxPosZ)
+	--Debug.console("Bounds = " .. minPosX .. "," .. maxPosX .. "," .. minPosY.. "," .. maxPosY.. "," .. minPosZ.. "," .. maxPosZ)
 	return minPosX, maxPosX, minPosY, maxPosY, minPosZ, maxPosZ
 end
 
@@ -587,35 +550,38 @@ function getClosestPositionToReference(token, referenceX, referenceY, referenceZ
 
 	if token.getContainerNode then
 		midX, midY = token.getPosition()
-		ctNode = CombatManager.getCTFromToken(token)
-		if ctNode then
-			midZ = TokenHeight.getHeight(ctNode) * gridsize / units
+		midZ = TokenHeight.getHeight(token) * gridsize / units
 
-			local nSpace = DB.getValue(ctNode, "space")
-			if nSpace == nil then
+		--local nSpace = DB.getValue(token, "space")
+		local nSpace = token.nSpace
+		if nSpace == nil then
+			local ctNode = CombatManager.getCTFromToken(token)
+			if ctNode then 
+				local nDU = GameSystem.getDistanceUnitsPerGrid()
+				token.nSpace = math.ceil(DB.getValue(ctNode, "space", nDU) / nDU)
+			end
+
+			if not (ctNode and token.nSpace) then
 				nSpace = units
 				local tokenName = "Unknown Token Name"
-				local ctNodeName = "Unknown CT Node Name"
 				if token.getName then
 					tokenName = token.getName()
 				end
-				if ctNode.getName then
-					ctNodeName = ctNode.getName()
-				end
-				Debug.console("Missing module for " .. tokenName .. "/" .. ctNodeName .. ". Remove from map and re-add.")
+				Debug.console("Missing module for " .. tokenName .. ". Remove from map and re-add.")
 			end
-
-			local nGridSize = math.floor(nSpace / units)
-			local nHalfSquare = gridsize / 2
-			
-			-- Form the grid
-			minPosX, maxPosX, minPosY, maxPosY, minPosZ, maxPosZ = getTokenBounds(token)
-
-			-- Get the real closest point and slide to the middle of the square
-			closestX=MathFunctions.clampAndAdjust(referenceX,minPosX,maxPosX,nHalfSquare)
-			closestY=MathFunctions.clampAndAdjust(referenceY,minPosY,maxPosY,nHalfSquare)
-			closestZ=MathFunctions.clampAndAdjust(referenceZ,minPosZ,maxPosZ,nHalfSquare)
+		--else
+			--Debug.console(token.getName() .. " nSpace = " .. nSpace)
 		end
+
+		local nHalfSquare = gridsize / 2
+			
+		-- Form the grid
+		minPosX, maxPosX, minPosY, maxPosY, minPosZ, maxPosZ = getTokenBounds(token)
+
+		-- Get the real closest point and slide to the middle of the square
+		closestX=MathFunctions.clampAndAdjust(referenceX,minPosX,maxPosX,nHalfSquare)
+		closestY=MathFunctions.clampAndAdjust(referenceY,minPosY,maxPosY,nHalfSquare)
+		closestZ=MathFunctions.clampAndAdjust(referenceZ,minPosZ,maxPosZ,nHalfSquare)
 	else
 		closestX, closestY = token['x'], token['y']  
 		closestZ = 0
@@ -628,7 +594,7 @@ end
 
 -- Distance between two locations in 3 dimensions.  
 function distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
---Debug.console("distanceBetween " .. startX .. "," .. startY .. "," .. startZ .. " and " ..  endX .. "," .. endY .. "," .. endZ .. ": " .. (bSquare and 'true' or 'false'))
+	--Debug.console("distanceBetween " .. startX .. "," .. startY .. "," .. startZ .. " and " ..  endX .. "," .. endY .. "," .. endZ .. ": " .. (bSquare and 'true' or 'false'))
 	local gridsize, units, suffix, diagmult = getImageSettings()
 
 	-- snap x coordinate to the nearest half square to account for the jiggle introduced to work around the measurement arrow not updating
@@ -640,7 +606,8 @@ function distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
 	local dy = math.abs(endY-startY)
 	local dz = math.abs(endZ-startZ)
 
---Debug.console("gridsize " .. gridsize .. ", units " .. units .. ", suffix " .. suffix .. ", diagmult " ..  diagmult)
+	--Debug.console("gridsize " .. gridsize .. ", units " .. units .. ", suffix " .. suffix .. ", diagmult " ..  diagmult)
+	--Debug.console("start = " .. startX .. ", " .. startY .. ", " .. startZ .. "  end = " .. endX .. ", " .. endY .. ", " .. endZ)
 	
 	if bSquare then
 		local hyp = MathFunctions.magnitude(dx,dy,dz)
@@ -649,12 +616,12 @@ function distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
 		if diagmult == 1 then
 			-- Just a max of each dimension
 			local longestLeg = math.max(dx, dy, dz)		
---Debug.console("longestLeg = " .. longestLeg)
+			--Debug.console("longestLeg = " .. longestLeg)
 			totalDistance = math.ceil(longestLeg/gridsize)*units
 		elseif diagmult == 0 then
 			-- Get 3D distance directly
 			local hyp = MathFunctions.magnitude(dx,dy,dz)
---Debug.console("hyp = " .. hyp)
+			--Debug.console("hyp = " .. hyp)
 			totalDistance = (hyp / gridsize)* units
 		else 
 			if OptionsManager.getOption("THIDIAGONALS") == "short" then
@@ -673,7 +640,7 @@ function distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
 					diagonal = math.floor(math.ceil(mid/gridsize) / 2) * gridsize
 				end
 				totalDistance = math.ceil((straight + diagonal) / gridsize)
---Debug.console("td = " .. totalDistance)
+				--Debug.console("td = " .. totalDistance)
 				totalDistance = totalDistance * units
 			else
 				-- You get full amount of the longest path and half from each of the others
@@ -687,79 +654,39 @@ function distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
 					diagonal = math.floor((math.ceil(dx/gridsize) + math.ceil(dy/gridsize)) / 2) * gridsize
 				end
 				totalDistance = math.ceil((straight + diagonal) / gridsize)
---Debug.console("td = " .. totalDistance)
+				--Debug.console("td = " .. totalDistance)
 				totalDistance = totalDistance * units
 			end
 		end
 	end
 
---Debug.console(" is " .. totalDistance)
+	--Debug.console(" is " .. totalDistance)
 	return totalDistance
 end
 
-function onMeasurePointer(pixellength,pointertype,startX,startY,endX,endY)
-	-- Modified by SilentRuin to better integrate with the superclasses and optimize
-	local retStr = nil -- we will not do anything with label but if someone ever does we can handle the that code first
-	if super and super.onMeasurePointer then
-		retStr = super.onMeasurePointer(pixellength, pointertype, startX, startY, endX, endY)
-	end
+function getTokensAt(startX, startY, endX, endY)
 
 	local gridsize, units, suffix, diagmult = getImageSettings()
-	local heightOrigin = 0
-	local heightTarget = 0
-
-	local ctNodeOrigin, ctNodeTarget = getCTNodeAt(startX, startY, endX, endY)
-	if ctNodeOrigin and ctNodeTarget then
-		heightOrigin = TokenHeight.getHeight(ctNodeOrigin)
-		heightTarget = TokenHeight.getHeight(ctNodeTarget)
-		local originSpace = 0
-		local targetSpace = 0
-		originSpace = DB.getValue(ctNodeOrigin, "space")
-		targetSpace = DB.getValue(ctNodeTarget, "space")
---Debug.console("Space = " .. originSpace .. "," .. targetSpace)
-		
-		if not (gridsize and units and suffix and diagmult) then 
-			return retStr
-		end
-		local bSquare = false
-		if pointertype == "rectangle" then
-			bSquare = true
-		end
-
-		local startZ = 0
-		local endZ = 0
-		startZ = heightOrigin * gridsize / units
-		endZ = heightTarget * gridsize / units
-
---Debug.console("OMP: distanceBetween " .. DB.getValue(ctNodeOrigin, "name", "") .. " and " .. DB.getValue(ctNodeTarget, "name", "") )
-		local distance = distanceBetween(startX,startY,startZ,endX,endY,endZ,bSquare)
-
-		if distance == 0 then
-			retStr = ""
-		else
-			local stringDistance = nil
-			if diagmult == 0 then
-				stringDistance = string.format("%.1f", distance)
-			else
-				stringDistance = string.format("%.0f", distance)	
-			end
-			retStr = stringDistance .. suffix
-		end
-
---		Debug.console("OMP: " .. ctNodeTarget.getName() .. " is " .. distance .. ": " .. startX .. "," .. startY .. "," .. startZ .. ": " .. endX .. "," .. endY .. "," .. endZ .. ": " .. retStr) 
-	end
-	return retStr
-end
-
-function getCTNodeAt(startX, startY, endX, endY)
-	local gridsize, units, _, _ = getImageSettings()
-	local startCTnode = nil
-	local endCTnode = nil
+	local startNumber = { x = startX, y = startY}
+	local endNumber = {x = endX, y = endY}
 	local startToken = nil
 	local endToken = nil
+	local startTokens = nil
+	local endTokens = nil
+	local distanceToLook = 100
 
-	local startTokens = getTokensWithinSquare(startX, startY, units/4)
-	
+--	if getTokensWithinDistance then
+--		startTokens = getTokensWithinDistance(startNumber, distanceToLook)
+--		Debug.console("found " .. #startTokens .. " start tokens")
+--	end
+
+--	if getTokensWithinDistance then
+--		endTokens = getTokensWithinDistance(endNumber, distanceToLook)
+--		Debug.console("found " .. #endTokens .. " end tokens")
+--	end	
+	startTokens = getTokens()
+	endTokens = getTokens()
+
 	-- If multiple targets, get the one with the center closest to the coordinates and try to avoid returning the same token
 	if startTokens then
 		if #startTokens == 1 then
@@ -769,7 +696,7 @@ function getCTNodeAt(startX, startY, endX, endY)
 			local testY = 0
 			local minDistance = gridsize * 1000  -- Really just want a really big number
 			for _, token in pairs(startTokens) do
-				testX, testY = token.getPosition()
+				testX, testY, _ = getClosestPositionToReference(token, startX, startY, 0)
 				local testDistance = math.sqrt((testX-startX)^2 + (testY-startY)^2)
 				if testDistance < minDistance then
 					minDistance = testDistance
@@ -777,14 +704,11 @@ function getCTNodeAt(startX, startY, endX, endY)
 				end
 			end
 		end
-		if startToken then
-			startCTnode = CombatManager.getCTFromToken(startToken)
-		end
+		--Debug.console("Start token = " .. startToken.getName())
 	end
 	
-	-- same as above, but use <= in distance test to help avoid returning the same token
-	local endTokens = getTokensWithinSquare(endX, endY, units/4)
-	if endTokens then
+	-- same as above, but use <= in distance test to help avoid returning the same token.  Don't need to do if there's no start token
+	if endTokens and startToken then
 		if #endTokens == 1 then
 			endToken = endTokens[1]
 		elseif #endTokens > 1 then
@@ -792,7 +716,7 @@ function getCTNodeAt(startX, startY, endX, endY)
 			local testY = 0
 			local minDistance = gridsize * 1000  -- Really just want a really big number
 			for _, token in pairs(endTokens) do
-				testX, testY = token.getPosition()
+				testX, testY, _ = getClosestPositionToReference(token, endX, endY, 0)
 				local testDistance = math.sqrt((testX-endX)^2 + (testY-endY)^2)
 				if testDistance < minDistance then
 					minDistance = testDistance
@@ -800,12 +724,10 @@ function getCTNodeAt(startX, startY, endX, endY)
 				end
 			end
 		end
-		if endToken then
-			endCTnode = CombatManager.getCTFromToken(endToken)
-		end
+		--Debug.console("End token = " .. endToken.getName())
 	end		
-	
-	return startCTnode, endCTnode
+
+	return startToken, endToken
 end
 
 function getTokenOfTokenId(tokenid)	
@@ -873,19 +795,4 @@ function matchWithinSize(startX, startY, endX, endY, sizeMultiplier, gridsize)
 	end
 
 	return equal
-end
-
--- From diablobob and bratch9
-function onDrop(x, y, draginfo)
-	if draginfo.getType() == "token" then
-		local custData = {}
-		custData.x = x
-		custData.y = y
-		custData.imgCtrl = self
-		draginfo.setCustomData(custData)
-	end
-
-	if super and super.onDrop then
-		return super.onDrop(x, y, draginfo)
-	end
 end
