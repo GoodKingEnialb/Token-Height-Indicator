@@ -40,6 +40,7 @@ function getDistanceBetween(sourceItem, targetItem)
 end
 
 function getTokensWithinDistance(sourceItem, distance)
+	--Debug.console("getTokensWithinDistance(" .. sourceItem.getName() .. ", " .. distance .. ")")
 
 	if not sourceItem or not CombatManager then
 		return {}
@@ -61,11 +62,11 @@ function getTokensWithinDistance(sourceItem, distance)
 	local closeTokens = {}
 
 	startX, startY, startZ, sourceToken = getCoordinatesOfItem(sourceItem)
+	--Debug.console("Source (orig) = " .. startX .. "," .. startY .. "," .. startZ .. ": " .. gridsize .. " / " .. units)
 	
 	for _,targetToken in pairs(getTokens()) do
 		-- Arnagus fix for targets on multiple maps
 		if targetToken and targetToken ~= sourceToken then
-
 			local endZ = TokenHeight.getHeight(targetToken) * gridsize / units
 			
 			if not sourceToken.getContainerNode then
@@ -77,7 +78,9 @@ function getTokensWithinDistance(sourceItem, distance)
 				endX, endY, endZ = getClosestPosition(targetToken, sourceToken)
 			end
 			local distanceToToken = distanceBetween(startX, startY, startZ, endX, endY, endZ, false)
-			if  distanceToToken < distance then
+			--Debug.console("distance between " .. sourceToken.getName() .. " and " .. targetToken.getName() .. " is " .. distanceToToken)
+			--Debug.console("source: " .. startX .. "," .. startY .. "," .. startZ .. " target = " .. endX .. "," .. endY .. "," .. endZ)
+			if  distanceToToken <= distance then
 				table.insert(closeTokens, targetToken)
 			end
 		end
@@ -562,12 +565,12 @@ function getClosestPositionToReference(token, referenceX, referenceY, referenceZ
 			end
 
 			if not (ctNode and token.nSpace) then
-				nSpace = units
-				local tokenName = "Unknown Token Name"
-				if token.getName then
-					tokenName = token.getName()
-				end
-				Debug.console("Missing module for " .. tokenName .. ". Remove from map and re-add.")
+				nSpace = 1
+				--local tokenName = "Unknown Token Name"
+				--if token.getName then
+				--	tokenName = token.getName()
+				--end
+				-- Debug.console("Missing module for " .. tokenName .. ". Remove from map and re-add.")
 			end
 		--else
 			--Debug.console(token.getName() .. " nSpace = " .. nSpace)
@@ -577,6 +580,7 @@ function getClosestPositionToReference(token, referenceX, referenceY, referenceZ
 			
 		-- Form the grid
 		minPosX, maxPosX, minPosY, maxPosY, minPosZ, maxPosZ = getTokenBounds(token)
+		--Debug.console(token.getName() .. " bounds = " .. minPosX .. "," .. maxPosX .. "," .. minPosY .. "," .. maxPosY .. "," .. minPosZ .. "," .. maxPosZ)
 
 		-- Get the real closest point and slide to the middle of the square
 		closestX=MathFunctions.clampAndAdjust(referenceX,minPosX,maxPosX,nHalfSquare)

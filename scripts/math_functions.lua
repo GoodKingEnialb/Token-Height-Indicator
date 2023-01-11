@@ -103,8 +103,8 @@ function clampAndAdjust(x, minVal, maxVal, adjustVal)
 	else 
 		if x < minVal + adjustVal then
 			result = minVal + adjustVal
-		elseif x > minVal - adjustVal then
-			result = minVal - adjustVal
+		elseif x > maxVal - adjustVal then
+			result = maxVal - adjustVal
 		else
 			result = x
 		end

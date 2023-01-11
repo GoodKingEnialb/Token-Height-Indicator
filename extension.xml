@@ -66,13 +66,15 @@
 		5.8  - Force a redraw of the measurement arrow by moving a pixel away (or back) on each height change.  Fixed the compatibility with Aura Effects again, with help from SilentRuin.
 		6.0  - Major performance improvements by moving logic from combat track nodes to image tokens with help from silentruin, MeAndUnique, and Saagael
 		6.1  - Oops, restored the accidental deletion of AuraEffects update on height change
+		6.2  - Removed warnings for tokens not on the combat tracker or without space
+		6.3  - Fixed error in Token.getTokensWithinDistance
 -->
-<root version="6" release="1">
-	<announcement text="Token Height Indication v6.1 by GKEnialb with help from bmos, SilentRuin, kelrugem, MeAndUnique, Saagael, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, Arnagus, and rhagelstrom" font="emotefont" icon="GKElogo" />
+<root version="6" release="3">
+	<announcement text="Token Height Indication v6.3 by GKEnialb with help from bmos, SilentRuin, kelrugem, MeAndUnique, Saagael, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, Arnagus, and rhagelstrom" font="emotefont" icon="GKElogo" />
 	
 	<properties>
 		<name>Feature: Token Height Indication</name>
-		<version>6.1</version>
+		<version>6.3</version>
 		
 		<author>Good King Enialb with help from bmos, SilentRuin, kelrugem, MeAndUnique, Saagael, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, Arnagus, and rhagelstrom</author>
 		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>
