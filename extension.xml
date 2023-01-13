@@ -68,13 +68,14 @@
 		6.1  - Oops, restored the accidental deletion of AuraEffects update on height change
 		6.2  - Removed warnings for tokens not on the combat tracker or without space
 		6.3  - Fixed error in Token.getTokensWithinDistance
+		6.4  - Fixed bug in changing options
 -->
-<root version="6" release="3">
-	<announcement text="Token Height Indication v6.3 by GKEnialb with help from bmos, SilentRuin, kelrugem, MeAndUnique, Saagael, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, Arnagus, and rhagelstrom" font="emotefont" icon="GKElogo" />
+<root version="6" release="4">
+	<announcement text="Token Height Indication v6.4 by GKEnialb with help from bmos, SilentRuin, kelrugem, MeAndUnique, Saagael, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, Arnagus, and rhagelstrom" font="emotefont" icon="GKElogo" />
 	
 	<properties>
 		<name>Feature: Token Height Indication</name>
-		<version>6.3</version>
+		<version>6.4</version>
 		
 		<author>Good King Enialb with help from bmos, SilentRuin, kelrugem, MeAndUnique, Saagael, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, Arnagus, and rhagelstrom</author>
 		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>

@@ -432,7 +432,7 @@ function changeOptions()
 	    local token = CombatManager.getTokenFromCT(ctNode)
 		if token then
 			local cNode = token.getContainerNode()
-			local widget = cNode.findWidget("heightindication")
+			local widget = token.findWidget("heightindication")
 			if widget then	
 				local dbNode = DB.getChild(cNode, getHeightKey(token))
 				local nHeight = 0
@@ -443,7 +443,7 @@ function changeOptions()
 			
 				widget.destroy()
 				if nHeight ~= 0 then
-					widget = ctToken.addTextWidget( "mini_name", '' )
+					widget = token.addTextWidget( "mini_name", '' )
 					if heightFont ~= '' then
 						widget.setFont(heightFont)
 					end
