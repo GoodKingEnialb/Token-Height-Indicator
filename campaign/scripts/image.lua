@@ -17,6 +17,7 @@ function onInit()
 
 	_, units, suffix, _ = getImageSettings()
 
+	TokenHeight.updateUnits(units, suffix)
 	TokenHeight.refreshHeights(getTokens())
 end
 
@@ -134,6 +135,8 @@ function onMeasurePointer(pixellength,pointertype,startX,startY,endX,endY)
 		end
 
 		--Debug.console("OMP: " .. tokenOrigin.getName() .. " is " .. distance .. ": " .. startX .. "," .. startY .. "," .. startZ .. ": " .. endX .. "," .. endY .. "," .. endZ .. ": " .. retStr) 
+	else
+		--Debug.console("Using core result of " .. retStr)
 	end
 	return retStr
 end

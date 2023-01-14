@@ -4,7 +4,7 @@
 
 -- Variables
 local notchScale = 5
-local heightUnits = ' ft'
+local heightSuffix = ' ft'
 local bFoundUnits = false
 local heightFont = ''
 local bPlayerControl = true
@@ -205,6 +205,8 @@ function updateHeight(token, notches)
     end
 
 	local nHeight = getHeight(token)
+
+	updateUnitsForToken(token)
 	
     -- update height
     nHeight = nHeight + (notchScale * notches)
@@ -239,7 +241,8 @@ function setHeight(token, nHeight)
 		if ctNode and Session.IsHost then
 			DB.setValue(ctNode, "heightvalue", "number", nHeight)
 			DB.setValue(cNode, getHeightKey(token), "number", nHeight)
-			jiggle(token, true)
+			--Debug.console("Setting height of " .. token.getName() .. " (" .. getHeightKey(token) .. ") to " .. nHeight)
+			jiggle(token)
 		end
 	end
 end
@@ -258,9 +261,12 @@ function getHeight(token)
 	local cNode = token.getContainerNode()
 	local heightHolder = DB.getChild(cNode, getHeightKey(token))
 	local nHeight = 0
-	if heightHolder and heightHolder.getValue() then
-        nHeight = tonumber(heightHolder.getValue())   
-    end
+	if heightHolder and heightHolder.getValue then
+        nHeight = tonumber(heightHolder.getValue())  
+		--Debug.console("Height of " .. token.getName() .. " (" .. heightHolder.getNodeName() .. " / " .. getHeightKey(token) .. ") is " .. nHeight) 
+    --else
+		--Debug.console("No HeightHolder of " .. token.getName() .. " (" .. getHeightKey(token) .. ") is " .. nHeight) 
+	end
 	return nHeight
 end
 
@@ -299,7 +305,8 @@ function jiggle(token)
 		local ctrlImage, _, _ = ImageManager.getImageControl(token, false)
 		if ctrlImage then
 			local gridsize, _, _, _ = ctrlImage.getImageSettings()
-			local xNorm = x % (gridsize / 2)
+			local halfSquare = gridsize / 2
+			local xNorm = math.floor(x-halfSquare) % 2
 			local jiggleAmount = 1
 			if xNorm == 0 then
 				jiggleAmount = 1
@@ -318,15 +325,31 @@ function refreshHeights(tokenList)
 	end
 end
 
-function updateUnits(image)
-	_, notchScale, suffix, _ = image.getImageSettings()
+function updateUnitsForToken(token)
+	local ctrlImage, _, _ = ImageManager.getImageControl(token, false)
+	if ctrlImage then
+		_, notchScale, suffix, _ = ctrlImage.getImageSettings()
+		if suffix == '\'' then
+			heightSuffix = ' ft'
+		elseif suffix == '' then
+			heightSuffix = ' sq'
+		else
+			heightSuffix = suffix
+		end
+		--Debug.console("UUfT: Setting suffix to " .. heightSuffix)
+	end	
+end
+
+function updateUnits(units, suffix)
 	if suffix == '\'' then
-		heightUnits = ' ft'
+		heightSuffix = ' ft'
 	elseif suffix == '' then
-		heightUnits = ' sq'
+		heightSuffix = ' sq'
 	else
-		heightUnits = suffix
+		heightSuffix = suffix
 	end
+	notchScale = units
+	--Debug.console("UU: Setting suffix to " .. heightSuffix .. " and units to " .. notchScale)
 end
 
 
@@ -418,7 +441,7 @@ function displayHeight(token)
 		widget.setVisible(false)
     else
 		-- update height display        
-		widget.setText(nHeight .. heightUnits)
+		widget.setText(nHeight .. heightSuffix)
 		widget.bringToFront();       
 		widget.setVisible(true)
     end
@@ -452,7 +475,7 @@ function changeOptions()
 					widget.setPosition(OptionsManager.getOption("THIPOSITION"), 0, 0)
 			
 					-- update height display        
-					widget.setText(nHeight .. heightUnits)
+					widget.setText(nHeight .. heightSuffix)
 					widget.bringToFront();       
 					widget.setVisible(true)
 				end	
@@ -462,6 +485,15 @@ function changeOptions()
 end
 
 function getHeightKey(token)
-	local heightKey = token.getId() .. "-heightvalue"
+	local id = "noID"
+	local name = "noName"
+	if token.getID then
+		id = token.getId()
+	end
+
+	if token.getName then
+		name = token.getName()
+	end
+	local heightKey = id .. "-heightvalue-" .. name
 	return heightKey
 end
