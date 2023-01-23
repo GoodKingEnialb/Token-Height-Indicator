@@ -70,13 +70,14 @@
 		6.3  - Fixed error in Token.getTokensWithinDistance
 		6.4  - Fixed bug in changing options
 		6.5  - Fixed issue with 4E units
+		6.6  - Changed the height key to avoid an issue with some maps
 -->
-<root version="6" release="5">
-	<announcement text="Token Height Indication v6.5 by GKEnialb with help from bmos, SilentRuin, kelrugem, MeAndUnique, Saagael, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, Arnagus, and rhagelstrom" font="emotefont" icon="GKElogo" />
+<root version="6" release="6">
+	<announcement text="Token Height Indication v6.6 by GKEnialb with help from bmos, SilentRuin, kelrugem, MeAndUnique, Saagael, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, Arnagus, and rhagelstrom" font="emotefont" icon="GKElogo" />
 	
 	<properties>
 		<name>Feature: Token Height Indication</name>
-		<version>6.5</version>
+		<version>6.6</version>
 		
 		<author>Good King Enialb with help from bmos, SilentRuin, kelrugem, MeAndUnique, Saagael, kevininrussia, SoxMax, mattekure, diablobob, Moon Wizard, bratch9, Arnagus, and rhagelstrom</author>
 		<description>Provides the ability to indicate a token's height with the mouse wheel.</description>

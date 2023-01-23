@@ -239,6 +239,10 @@ function setHeight(token, nHeight)
 		local ctNode = getCTFromToken(token)
 
 		if ctNode and Session.IsHost then
+			if (not token.getName or token.getName() == "") and ctNode.getName then
+
+				token.setName(ctNode.getName())
+			end
 			DB.setValue(ctNode, "heightvalue", "number", nHeight)
 			DB.setValue(cNode, getHeightKey(token), "number", nHeight)
 			--Debug.console("Setting height of " .. token.getName() .. " (" .. getHeightKey(token) .. ") to " .. nHeight)
@@ -487,7 +491,7 @@ end
 function getHeightKey(token)
 	local id = "noID"
 	local name = "noName"
-	if token.getID then
+	if token.getId then
 		id = token.getId()
 	end
 
